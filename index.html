@@ -116,7 +116,6 @@
     border-color: var(--accent2);
     box-shadow: 0 0 0 3px rgba(34,211,238,0.1);
   }
-  .input-field:invalid { border-color: var(--danger); }
 
   /* BUTTONS */
   .btn {
@@ -320,9 +319,7 @@
     transition: max-height 0.3s ease;
   }
   .breakdown-content.open { max-height: 400px; }
-  .breakdown-inner {
-    padding: 10px 14px;
-  }
+  .breakdown-inner { padding: 10px 14px; }
   .breakdown-item {
     display: flex;
     justify-content: space-between;
@@ -411,7 +408,7 @@
     <div class="card-title"><span>👥</span> รายชื่อเพื่อน</div>
     <div class="input-row">
       <input id="friendInput" class="input-field" type="text" placeholder="กรอกชื่อเพื่อน" maxlength="20" autocomplete="off">
-      <button class="btn btn-primary" id="addFriendBtn" onclick="addFriend()" disabled>+ เพิ่ม</button>
+      <button class="btn btn-primary" id="addFriendBtn" onclick="AppState.addFriend()" disabled>+ เพิ่ม</button>
     </div>
     <div class="tags-container" id="friendTags"></div>
   </div>
@@ -420,8 +417,8 @@
   <div class="card">
     <div class="card-title"><span>🧾</span> รายการ</div>
     <div class="input-row">
-      <input id="itemInput" class="input-field" type="text" placeholder="กรอกรายการ เว้นวรรค ราคา เช่น เบียร์ 400" autocomplete="off" maxlength="60">
-      <button class="btn btn-primary" id="addItemBtn" onclick="addItem()" disabled>+ เพิ่ม</button>
+      <input id="itemInput" class="input-field" type="text" placeholder="กรอกรายการและราคา เช่น ส้มตำ40 หรือ ส้มตำ 40" autocomplete="off" maxlength="60">
+      <button class="btn btn-primary" id="addItemBtn" onclick="AppState.addItem()">+ เพิ่ม</button>
     </div>
     <div id="itemsList"></div>
   </div>
@@ -435,7 +432,7 @@
     <!-- PAYMENT INFO -->
     <div class="card-title" style="margin-bottom:12px"><span>🏦</span> ข้อมูลรับโอน <span style="color:var(--accent3);font-size:0.7rem;font-weight:400;text-transform:none;letter-spacing:0">* กรอกให้ครบเพื่อแชร์</span></div>
     <div class="input-row" style="margin-bottom:10px">
-      <select id="bankType" class="input-field" onchange="onBankTypeChange()">
+      <select id="bankType" class="input-field" onchange="UI.onBankTypeChange()">
         <option value="">— เลือกช่องทาง —</option>
         <option value="promptpay">📲 พร้อมเพย์</option>
         <option value="bank">🏦 ธนาคาร</option>
@@ -443,7 +440,7 @@
     </div>
     <div id="bankFields" style="display:none;flex-direction:column;gap:10px">
       <div id="bankNameRow" class="input-row" style="display:none">
-        <select id="bankName" class="input-field" onchange="onBankNameChange()">
+        <select id="bankName" class="input-field" onchange="UI.onBankNameChange()">
           <option value="">— เลือกธนาคาร —</option>
           <option>กสิกรไทย (KBANK)</option>
           <option>กรุงไทย (KTB)</option>
@@ -475,8 +472,8 @@
 
     <div class="divider"></div>
     <div class="action-row">
-      <button class="btn btn-accent2" id="shareBtn" onclick="shareText()">📤 แชร์ข้อความ</button>
-      <button class="btn btn-amber" id="saveBtn" onclick="saveImage()">🖼 บันทึกสลิป</button>
+      <button class="btn btn-accent2" id="shareBtn" onclick="Actions.shareText()">📤 แชร์ข้อความ</button>
+      <button class="btn btn-amber" id="saveBtn" onclick="Actions.saveImage()">🖼 บันทึกสลิป</button>
     </div>
   </div>
 
@@ -497,7 +494,7 @@
     <div id="dialogIcon" style="font-size:2.4rem;text-align:center;margin-bottom:12px">⚠️</div>
     <div id="dialogTitle" style="font-size:1.1rem;font-weight:700;text-align:center;margin-bottom:8px;color:#e8edf5"></div>
     <ul id="dialogList" style="list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:6px"></ul>
-    <button onclick="closeDialog()" style="
+    <button onclick="UI.closeDialog()" style="
       width:100%;padding:13px;border-radius:12px;border:none;
       background:linear-gradient(135deg,#4ade80,#22c55e);
       color:#0a1a0e;font-family:Kanit,sans-serif;font-size:1rem;font-weight:700;cursor:pointer;
@@ -505,625 +502,490 @@
   </div>
 </div>
 
-<style>
-@keyframes dialogIn {
-  from { opacity:0; transform:scale(0.9) translateY(10px); }
-  to   { opacity:1; transform:scale(1) translateY(0); }
-}
-</style>
-
 <div class="toast" id="toast"></div>
 <canvas id="slipCanvas"></canvas>
 
 <script>
-let friends = [];
-let items = [];
-let openBreakdowns = new Set();
+// ─── STATE MANAGEMENT ───
+const AppState = {
+  friends: [],
+  items: [],
+  openBreakdowns: new Set(),
 
-// ─── FRIEND INPUT ───
-const friendInput = document.getElementById('friendInput');
-const addFriendBtn = document.getElementById('addFriendBtn');
-
-friendInput.addEventListener('input', () => {
-  // Only letters (Thai + English)
-  friendInput.value = friendInput.value.replace(/[^ก-๙a-zA-Z\s]/g, '');
-  addFriendBtn.disabled = friendInput.value.trim() === '';
-});
-friendInput.addEventListener('keydown', e => { if(e.key === 'Enter') addFriend(); });
-
-function addFriend() {
-  const name = friendInput.value.trim();
-  if (!name) return;
-  if (friends.includes(name)) { showToast('⚠️ มีชื่อนี้แล้ว'); return; }
-  friends.push(name);
-  friendInput.value = '';
-  addFriendBtn.disabled = true;
-  renderFriendTags();
-  renderItems();
-  renderSummary();
-}
-
-function removeFriend(name) {
-  friends = friends.filter(f => f !== name);
-  items.forEach(item => { item.people = item.people.filter(p => p !== name); });
-  renderFriendTags();
-  renderItems();
-  renderSummary();
-}
-
-function renderFriendTags() {
-  const container = document.getElementById('friendTags');
-  container.innerHTML = friends.map(f => `
-    <div class="tag">
-      <span>${f}</span>
-      <button class="tag-remove" onclick="removeFriend('${f}')" title="ลบ">×</button>
-    </div>
-  `).join('');
-}
-
-// ─── ITEM INPUT ───
-const itemInput = document.getElementById('itemInput');
-const addItemBtn = document.getElementById('addItemBtn');
-
-itemInput.addEventListener('input', () => {
-  // Allow Thai, English letters, numbers, and spaces only
-  itemInput.value = itemInput.value.replace(/[^ก-๙a-zA-Z0-9\s]/g, '');
-  validateItemInput();
-});
-itemInput.addEventListener('keydown', e => { if(e.key === 'Enter') addItem(); });
-
-function validateItemInput() {
-  const val = itemInput.value.trim();
-  const parts = val.split(/\s+/);
-  const price = parseFloat(parts[parts.length - 1]);
-  addItemBtn.disabled = !(parts.length >= 2 && !isNaN(price) && price > 0 && val !== '');
-}
-
-function addItem() {
-  const val = itemInput.value.trim();
-  const parts = val.split(/\s+/);
-  const price = parseFloat(parts[parts.length - 1]);
-  if (parts.length < 2 || isNaN(price) || price <= 0) { showToast('⚠️ กรอก ชื่อรายการ เว้นวรรค ราคา'); return; }
-  const name = parts.slice(0, -1).join(' ');
-  items.push({ id: Date.now(), name, price, people: [] });
-  itemInput.value = '';
-  addItemBtn.disabled = true;
-  renderItems();
-  renderSummary();
-}
-
-function removeItem(id) {
-  items = items.filter(i => i.id !== id);
-  renderItems();
-  renderSummary();
-}
-
-function togglePerson(itemId, person) {
-  const item = items.find(i => i.id === itemId);
-  if (!item) return;
-  if (item.people.includes(person)) item.people = item.people.filter(p => p !== person);
-  else item.people.push(person);
-  renderItems();
-  renderSummary();
-}
-
-function selectAll(itemId) {
-  const item = items.find(i => i.id === itemId);
-  if (!item) return;
-  item.people = [...friends];
-  renderItems();
-  renderSummary();
-}
-
-function deselectAll(itemId) {
-  const item = items.find(i => i.id === itemId);
-  if (!item) return;
-  item.people = [];
-  renderItems();
-  renderSummary();
-}
-
-function renderItems() {
-  const container = document.getElementById('itemsList');
-  if (items.length === 0) {
-    container.innerHTML = '<div class="empty-state"><span>🧾</span>ยังไม่มีรายการ</div>';
-    return;
-  }
-  container.innerHTML = items.map(item => `
-    <div class="item-card">
-      <div class="item-header">
-        <div class="item-name">${escHtml(item.name)}</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span class="item-price">฿${item.price.toLocaleString()}</span>
-          <button class="btn btn-danger" onclick="removeItem(${item.id})">🗑</button>
-        </div>
-      </div>
-      <div class="item-actions">
-        <button class="btn btn-ghost" onclick="selectAll(${item.id})">✅ เลือกทุกคน</button>
-        <button class="btn btn-ghost" onclick="deselectAll(${item.id})">⬜ ยกเลิกทุกคน</button>
-      </div>
-      ${friends.length === 0
-        ? '<p class="no-friends">เพิ่มเพื่อนก่อนเลยนะ 👆</p>'
-        : `<div class="person-toggles">
-            ${friends.map(f => `
-              <button class="person-toggle ${item.people.includes(f) ? 'selected' : ''}"
-                onclick="togglePerson(${item.id}, '${f}')">
-                ${item.people.includes(f) ? '✓ ' : ''}${escHtml(f)}
-              </button>
-            `).join('')}
-          </div>`
-      }
-    </div>
-  `).join('');
-}
-
-// ─── SUMMARY ───
-function calcSummary() {
-  const totals = {};
-  const breakdown = {};
-  friends.forEach(f => { totals[f] = 0; breakdown[f] = []; });
-  items.forEach(item => {
-    if (item.people.length === 0) return;
-    const share = item.price / item.people.length;
-    item.people.forEach(p => {
-      if (totals[p] !== undefined) {
-        totals[p] += share;
-        breakdown[p].push({ name: item.name, price: item.price, share, total: item.people.length });
-      }
+  calcSummary() {
+    const totals = {};
+    const breakdown = {};
+    this.friends.forEach(f => { totals[f] = 0; breakdown[f] = []; });
+    
+    this.items.forEach(item => {
+      if (item.people.length === 0) return;
+      const share = item.price / item.people.length;
+      item.people.forEach(p => {
+        if (totals[p] !== undefined) {
+          totals[p] += share;
+          breakdown[p].push({ name: item.name, price: item.price, share, total: item.people.length });
+        }
+      });
     });
-  });
-  return { totals, breakdown };
-}
+    return { totals, breakdown };
+  },
 
-function renderSummary() {
-  const card = document.getElementById('summaryCard');
-  if (friends.length === 0) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
-  const { totals, breakdown } = calcSummary();
-  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-  const table = document.getElementById('summaryTable');
+  addFriend() {
+    const el = document.getElementById('friendInput');
+    const name = el.value.trim();
+    if (!name) return;
+    if (this.friends.includes(name)) { UI.showToast('⚠️ มีชื่อนี้แล้ว'); return; }
+    this.friends.push(name);
+    el.value = '';
+    document.getElementById('addFriendBtn').disabled = true;
+    UI.renderAll();
+  },
 
-  let html = `<thead><tr>
-    <th>ชื่อ</th>
-    <th style="text-align:right">ยอดรวม</th>
-  </tr></thead><tbody>`;
+  removeFriend(name) {
+    this.friends = this.friends.filter(f => f !== name);
+    this.items.forEach(item => { item.people = item.people.filter(p => p !== name); });
+    UI.renderAll();
+  },
 
-  friends.forEach(f => {
-    const isOpen = openBreakdowns.has(f);
-    html += `
-      <tr class="summary-row" onclick="toggleBreakdown('${f}')">
-        <td><div class="person-name-cell">
-          <span class="expand-icon ${isOpen ? 'open' : ''}">▶</span>
-          ${escHtml(f)}
-        </div></td>
-        <td class="amount-cell">฿${totals[f].toFixed(2)}</td>
-      </tr>
-      <tr class="breakdown-row">
-        <td colspan="2">
-          <div class="breakdown-content ${isOpen ? 'open' : ''}" id="bd-${f}">
-            <div class="breakdown-inner">
-              ${breakdown[f].length === 0
-                ? '<p style="color:var(--text3);font-size:0.85rem">ยังไม่มีรายการ</p>'
-                : breakdown[f].map(b => `
-                  <div class="breakdown-item">
-                    <span>${escHtml(b.name)} <span style="color:var(--text3);font-size:0.78rem">(÷${b.total}คน)</span></span>
-                    <span class="breakdown-item-price">฿${b.share.toFixed(2)}</span>
-                  </div>
-                `).join('')
-              }
-            </div>
+  addItem() {
+    const el = document.getElementById('itemInput');
+    const val = el.value.trim();
+    
+    if (!val) { UI.showToast('⚠️ กรุณากรอก ชื่อรายการ และ ราคา ก่อนกดเพิ่มครับ'); return; }
+
+    // ─── NEW REGEX PARSING LOGIC ───
+    // ค้นหากลุ่มตัวเลขท้ายประโยค (รองรับทศนิยม เช่น 40, 120.50, .5) โดยไม่สนใจว่าข้างหน้าจะมีสเปซหรือไม่
+    const match = val.match(/^(.*?)\s*(\d*\.?\d+)$/);
+    
+    if (!match) {
+      UI.showToast('⚠️ ลืมใส่ราคาหรือเปล่า? ตัวอย่าง: ส้มตำ40 หรือ ส้มตำ 40');
+      return;
+    }
+
+    const name = match[1].trim();
+    const price = parseFloat(match[2]);
+
+    // ป้องกันเคสที่กรอกแต่ตัวเลขอย่างเดียว หรือราคาเป็น 0 / หาค่าไม่ได้
+    if (!name || isNaN(price) || price <= 0) {
+      UI.showToast('⚠️ รูปแบบไม่ถูกต้อง กรุณาใส่ชื่อรายการตามด้วยราคา เช่น เบียร์ 500');
+      return;
+    }
+    
+    this.items.push({ id: Date.now(), name, price, people: [] });
+    el.value = '';
+    UI.renderAll();
+  },
+
+  removeItem(id) {
+    this.items = this.items.filter(i => i.id !== id);
+    UI.renderAll();
+  },
+
+  togglePerson(itemId, person) {
+    const item = this.items.find(i => i.id === itemId);
+    if (!item) return;
+    if (item.people.includes(person)) item.people = item.people.filter(p => p !== person);
+    else item.people.push(person);
+    UI.renderAll();
+  },
+
+  selectAll(itemId) {
+    const item = this.items.find(i => i.id === itemId);
+    if (!item) return;
+    item.people = [...this.friends];
+    UI.renderAll();
+  },
+
+  deselectAll(itemId) {
+    const item = this.items.find(i => i.id === itemId);
+    if (!item) return;
+    item.people = [];
+    UI.renderAll();
+  }
+};
+
+// ─── UI RENDERER & INTERACTION ───
+const UI = {
+  escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  },
+
+  showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  },
+
+  showDialog(errors) {
+    const overlay = document.getElementById('dialogOverlay');
+    document.getElementById('dialogTitle').textContent = 'กรุณากรอกข้อมูลให้ครบก่อนนะ';
+    document.getElementById('dialogList').innerHTML = errors.map(e => `
+      <li style="display:flex;align-items:flex-start;gap:10px;background:#252c3a;border-radius:10px;padding:10px 12px;font-size:0.88rem;color:#a0aec0">
+        <span style="font-size:1rem;flex-shrink:0">${e.icon}</span>
+        <span>${e.text}</span>
+      </li>
+    `).join('');
+    overlay.style.display = 'flex';
+  },
+
+  closeDialog() {
+    document.getElementById('dialogOverlay').style.display = 'none';
+  },
+
+  onBankTypeChange() {
+    const type = document.getElementById('bankType').value;
+    document.getElementById('bankFields').style.display = type ? 'flex' : 'none';
+    if (!type) return;
+
+    const isPP = type === 'promptpay';
+    document.getElementById('bankNameRow').style.display = isPP ? 'none' : 'flex';
+    document.getElementById('accountNameRow').style.display = isPP ? 'none' : 'flex';
+    document.getElementById('promptpayNameRow').style.display = isPP ? 'flex' : 'none';
+    document.getElementById('bankOtherRow').style.display = 'none';
+    document.getElementById('accountNumber').placeholder = isPP ? 'เบอร์โทร / เลขบัตรพร้อมเพย์' : 'หมายเลขบัญชี (ไม่เกิน 14 หลัก)';
+    if (!isPP) this.onBankNameChange();
+  },
+
+  onBankNameChange() {
+    const val = document.getElementById('bankName').value;
+    document.getElementById('bankOtherRow').style.display = (val === 'other') ? 'flex' : 'none';
+  },
+
+  renderAll() {
+    this.renderFriends();
+    this.renderItems();
+    this.renderSummary();
+  },
+
+  renderFriends() {
+    document.getElementById('friendTags').innerHTML = AppState.friends.map(f => `
+      <div class="tag">
+        <span>${this.escHtml(f)}</span>
+        <button class="tag-remove" onclick="AppState.removeFriend('${f}')">×</button>
+      </div>
+    `).join('');
+  },
+
+  renderItems() {
+    const container = document.getElementById('itemsList');
+    if (AppState.items.length === 0) {
+      container.innerHTML = '<div class="empty-state"><span>🧾</span>ยังไม่มีรายการ</div>';
+      return;
+    }
+    container.innerHTML = AppState.items.map(item => `
+      <div class="item-card">
+        <div class="item-header">
+          <div class="item-name">${this.escHtml(item.name)}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="item-price">฿${item.price.toLocaleString()}</span>
+            <button class="btn btn-danger" onclick="AppState.removeItem(${item.id})">🗑</button>
           </div>
-        </td>
-      </tr>`;
-  });
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-ghost" onclick="AppState.selectAll(${item.id})">✅ เลือกทุกคน</button>
+          <button class="btn btn-ghost" onclick="AppState.deselectAll(${item.id})">⬜ ยกเลิกทุกคน</button>
+        </div>
+        ${AppState.friends.length === 0
+          ? '<p class="no-friends">เพิ่มเพื่อนก่อนเลยนะ 👆</p>'
+          : `<div class="person-toggles">
+              ${AppState.friends.map(f => `
+                <button class="person-toggle ${item.people.includes(f) ? 'selected' : ''}"
+                  onclick="AppState.togglePerson(${item.id}, '${f}')">
+                  ${item.people.includes(f) ? '✓ ' : ''}${this.escHtml(f)}
+                </button>
+              `).join('')}
+            </div>`
+        }
+      </div>
+    `).join('');
+  },
 
-  html += `<tr class="total-row">
-    <td style="font-weight:700;color:var(--text)">รวมทั้งหมด</td>
-    <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:1.1rem;color:var(--accent3);text-align:right">฿${grandTotal.toFixed(2)}</td>
-  </tr>`;
-  html += '</tbody>';
-  table.innerHTML = html;
-  updateShareButtons();
-}
+  renderSummary() {
+    const card = document.getElementById('summaryCard');
+    if (AppState.friends.length === 0 && AppState.items.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
 
-function toggleBreakdown(name) {
-  if (openBreakdowns.has(name)) openBreakdowns.delete(name);
-  else openBreakdowns.add(name);
-  renderSummary();
-}
-
-// ─── BANK TYPE TOGGLE ───
-function onBankTypeChange() {
-  const type = document.getElementById('bankType').value;
-  const fields = document.getElementById('bankFields');
-  const bankNameRow = document.getElementById('bankNameRow');
-  const accountNameRow = document.getElementById('accountNameRow');
-  const promptpayNameRow = document.getElementById('promptpayNameRow');
-  const bankOtherRow = document.getElementById('bankOtherRow');
-  if (!type) { fields.style.display = 'none'; updateShareButtons(); return; }
-  fields.style.display = 'flex';
-  if (type === 'promptpay') {
-    bankNameRow.style.display = 'none';
-    accountNameRow.style.display = 'none';
-    promptpayNameRow.style.display = 'flex';
-    bankOtherRow.style.display = 'none';
-    document.getElementById('accountNumber').placeholder = 'เบอร์โทร / เลขบัตรประชาชน';
-  } else {
-    bankNameRow.style.display = 'flex';
-    accountNameRow.style.display = 'flex';
-    promptpayNameRow.style.display = 'none';
-    document.getElementById('accountNumber').placeholder = 'หมายเลขบัญชี (ไม่เกิน 14 หลัก)';
-    onBankNameChange();
-  }
-  updateShareButtons();
-}
-
-function onBankNameChange() {
-  const val = document.getElementById('bankName').value;
-  const row = document.getElementById('bankOtherRow');
-  row.style.display = (val === 'other') ? 'flex' : 'none';
-  updateShareButtons();
-}
-
-document.getElementById('accountNumber').addEventListener('input', function() {
-  this.value = this.value.replace(/\D/g, '').slice(0, 14);
-  updateShareButtons();
-});
-
-// wire up all payment fields to recheck buttons
-['bankName','accountName','promptpayName','bankOtherName'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('input', updateShareButtons);
-});
-
-function getValidationErrors() {
-  const errors = [];
-  // Check friends
-  if (friends.length === 0) errors.push({ icon:'👥', text:'ยังไม่มีเพื่อนในระบบ' });
-  else {
-    const { totals } = calcSummary();
-    const total = Object.values(totals).reduce((a, b) => a + b, 0);
-    if (total === 0) errors.push({ icon:'🧾', text:'ยอดรวมยังเป็น 0 — เพิ่มรายการแล้วเลือกคนหารก่อน' });
-  }
-  // Check payment
-  const type = document.getElementById('bankType').value;
-  if (!type) {
-    errors.push({ icon:'🏦', text:'เลือกช่องทางรับโอน (พร้อมเพย์ หรือ ธนาคาร)' });
-  } else {
-    const acct = document.getElementById('accountNumber').value.trim();
-    if (!acct) {
-      const label = type === 'promptpay' ? 'เบอร์โทร / เลขบัตรประชาชน' : 'หมายเลขบัญชี';
-      errors.push({ icon:'🔢', text:'กรอก' + label });
-    }
-    if (type === 'bank') {
-      const bankVal = document.getElementById('bankName').value;
-      if (!bankVal) errors.push({ icon:'🏦', text:'เลือกธนาคาร' });
-      else if (bankVal === 'other' && !document.getElementById('bankOtherName').value.trim())
-        errors.push({ icon:'✏️', text:'ระบุชื่อธนาคาร' });
-      if (!document.getElementById('accountName').value.trim())
-        errors.push({ icon:'👤', text:'กรอกชื่อบัญชี' });
-    }
-  }
-  return errors;
-}
-
-function showDialog(errors) {
-  const overlay = document.getElementById('dialogOverlay');
-  document.getElementById('dialogTitle').textContent = 'กรุณากรอกข้อมูลให้ครบก่อนนะ';
-  const list = document.getElementById('dialogList');
-  list.innerHTML = errors.map(e => \`
-    <li style="display:flex;align-items:flex-start;gap:10px;background:#252c3a;border-radius:10px;padding:10px 12px;font-size:0.88rem;color:#a0aec0">
-      <span style="font-size:1rem;flex-shrink:0">\${e.icon}</span>
-      <span>\${e.text}</span>
-    </li>
-  \`).join('');
-  overlay.style.display = 'flex';
-}
-
-function closeDialog() {
-  document.getElementById('dialogOverlay').style.display = 'none';
-}
-
-document.getElementById('dialogOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeDialog();
-});
-
-function updateShareButtons() {}  // kept for compatibility, no-op
-
-function getPaymentInfo() {
-  const type = document.getElementById('bankType').value;
-  if (!type) return null;
-  const acctNo = document.getElementById('accountNumber').value.trim();
-  if (!acctNo) return null;
-  if (type === 'promptpay') {
-    const ppName = document.getElementById('promptpayName').value.trim();
-    return { type: 'promptpay', label: 'พร้อมเพย์', number: acctNo, name: ppName };
-  } else {
-    let bank = document.getElementById('bankName').value;
-    if (bank === 'other') bank = document.getElementById('bankOtherName').value.trim() || 'ธนาคาร';
-    const name = document.getElementById('accountName').value.trim();
-    return { type: 'bank', label: bank || 'ธนาคาร', number: acctNo, name };
-  }
-}
-
-// ─── SHARE TEXT ───
-function shareText() {
-  const errs = getValidationErrors();
-  if (errs.length) { showDialog(errs); return; }
-  const { totals, breakdown } = calcSummary();
-  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-  const pay = getPaymentInfo();
-
-  let lines = [];
-  lines.push('💸 สรุปหารตัง');
-  lines.push('');
-  friends.forEach(f => {
-    lines.push('👤 ' + f + '  →  ฿' + totals[f].toFixed(2));
-    breakdown[f].forEach(b => {
-      lines.push('   • ' + b.name + ' ÷' + b.total + 'คน = ฿' + b.share.toFixed(2));
+    const { totals, breakdown } = AppState.calcSummary();
+    const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+    
+    let html = `<thead><tr><th>ชื่อ</th><th style="text-align:right">ยอดรวม</th></tr></thead><tbody>`;
+    AppState.friends.forEach(f => {
+      const isOpen = AppState.openBreakdowns.has(f);
+      html += `
+        <tr class="summary-row" onclick="UI.toggleBreakdown('${f}')">
+          <td><div class="person-name-cell">
+            <span class="expand-icon ${isOpen ? 'open' : ''}">▶</span>${this.escHtml(f)}
+          </div></td>
+          <td class="amount-cell">฿${totals[f].toFixed(2)}</td>
+        </tr>
+        <tr class="breakdown-row">
+          <td colspan="2">
+            <div class="breakdown-content ${isOpen ? 'open' : ''}">
+              <div class="breakdown-inner">
+                ${breakdown[f].length === 0
+                  ? '<p style="color:var(--text3);font-size:0.85rem">ยังไม่มีรายการ</p>'
+                  : breakdown[f].map(b => `
+                    <div class="breakdown-item">
+                      <span>${this.escHtml(b.name)} <span style="color:var(--text3);font-size:0.78rem">(÷${b.total}คน)</span></span>
+                      <span class="breakdown-item-price">฿${b.share.toFixed(2)}</span>
+                    </div>
+                  `).join('')
+                }
+              </div>
+            </div>
+          </td>
+        </tr>`;
     });
-  });
-  lines.push('');
-  lines.push('รวม  ฿' + grandTotal.toFixed(2));
 
-  if (pay) {
-    lines.push('');
-    lines.push('── โอนมาที่ ──');
-    if (pay.type === 'promptpay') {
-      lines.push('📲 พร้อมเพย์  ' + pay.number);
-      if (pay.name) lines.push('   ชื่อ  ' + pay.name);
+    html += `<tr class="total-row">
+      <td style="font-weight:700;color:var(--text)">รวมทั้งหมด</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:1.1rem;color:var(--accent3);text-align:right">฿${grandTotal.toFixed(2)}</td>
+    </tr></tbody>`;
+    document.getElementById('summaryTable').innerHTML = html;
+  },
+
+  toggleBreakdown(name) {
+    if (AppState.openBreakdowns.has(name)) AppState.openBreakdowns.delete(name);
+    else AppState.openBreakdowns.add(name);
+    this.renderSummary();
+  }
+};
+
+// ─── ACTIONS (SHARE & SAVE IMAGE) ───
+const Actions = {
+  getValidationErrors() {
+    const errors = [];
+    if (AppState.friends.length === 0) {
+      errors.push({ icon: '👥', text: 'ยังไม่มีเพื่อนในระบบ' });
     } else {
-      lines.push('🏦 ' + pay.label);
-      lines.push('   เลขบัญชี  ' + pay.number);
-      if (pay.name) lines.push('   ชื่อบัญชี  ' + pay.name);
+      const { totals } = AppState.calcSummary();
+      if (Object.values(totals).reduce((a, b) => a + b, 0) === 0) 
+        errors.push({ icon: '🧾', text: 'ยอดรวมเป็น 0 — กรุณาเลือกคนหารในแต่ละรายการก่อนนะ' });
     }
-  }
 
-  const text = lines.join('\n');
-  if (navigator.share) {
-    navigator.share({ text });
-  } else {
-    navigator.clipboard.writeText(text).then(() => showToast('📋 คัดลอกข้อความแล้ว'));
-  }
-}
+    const type = document.getElementById('bankType').value;
+    if (!type) {
+      errors.push({ icon: '🏦', text: 'เลือกช่องทางรับโอน (พร้อมเพย์ หรือ ธนาคาร)' });
+    } else {
+      const acct = document.getElementById('accountNumber').value.trim();
+      if (!acct) errors.push({ icon: '🔢', text: type === 'promptpay' ? 'กรอกเบอร์โทร / เลขบัตรพร้อมเพย์' : 'กรอกหมายเลขบัญชีธนาคาร' });
+      
+      if (type === 'bank') {
+        if (!document.getElementById('bankName').value) errors.push({ icon: '🏦', text: 'เลือกธนาคาร' });
+        else if (document.getElementById('bankName').value === 'other' && !document.getElementById('bankOtherName').value.trim()) errors.push({ icon: '✏️', text: 'ระบุชื่อธนาคารอื่น ๆ' });
+        if (!document.getElementById('accountName').value.trim()) errors.push({ icon: '👤', text: 'กรอกชื่อบัญชี' });
+      } else if (type === 'promptpay' && !document.getElementById('promptpayName').value.trim()) {
+        errors.push({ icon: '👤', text: 'กรอกชื่อเจ้าของพร้อมเพย์' });
+      }
+    }
+    return errors;
+  },
 
-// ─── SAVE IMAGE (slip style) ───
-function saveImage() {
-  const errs = getValidationErrors();
-  if (errs.length) { showDialog(errs); return; }
-  const { totals, breakdown } = calcSummary();
-  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-  const pay = getPaymentInfo();
+  getPaymentInfo() {
+    const type = document.getElementById('bankType').value;
+    const acctNo = document.getElementById('accountNumber').value.trim();
+    if (!type || !acctNo) return null;
+    return type === 'promptpay' 
+      ? { type, label: 'พร้อมเพย์', number: acctNo, name: document.getElementById('promptpayName').value.trim() }
+      : { type, label: document.getElementById('bankName').value === 'other' ? document.getElementById('bankOtherName').value.trim() : document.getElementById('bankName').value, number: acctNo, name: document.getElementById('accountName').value.trim() };
+  },
 
-  const W = 480;
-  const lineH = 36;
-  const padding = 32;
-  const headerH = 130;
-  const personH = friends.length * (lineH + 2);
-  const itemRows = Object.values(breakdown).reduce((s, bd) => s + bd.length, 0);
-  const breakH = itemRows * 28 + friends.length * 20;
-  const payH = pay ? (pay.type === 'promptpay' ? (pay.name ? 90 : 74) : 110) : 0;
-  const footH = 60;
-  const totalH = headerH + personH + 20 + breakH + 20 + payH + footH + padding * 2 + 40;
+  shareText() {
+    const errs = this.getValidationErrors();
+    if (errs.length) { UI.showDialog(errs); return; }
 
-  const DPR = 3;
-  const canvas = document.getElementById('slipCanvas');
-  canvas.width = W * DPR;
-  canvas.height = totalH * DPR;
-  const ctx = canvas.getContext('2d', { alpha: false });
-  ctx.scale(DPR, DPR);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.textRenderingOptimization = 'optimizeLegibility';
+    const { totals, breakdown } = AppState.calcSummary();
+    const pay = this.getPaymentInfo();
+    let lines = ['💸 สรุปหารตัง', ''];
 
-  // Background
-  ctx.fillStyle = '#0d1117';
-  ctx.fillRect(0, 0, W, totalH);
+    AppState.friends.forEach(f => {
+      lines.push(`👤 ${f}  →  ฿${totals[f].toFixed(2)}`);
+      breakdown[f].forEach(b => lines.push(`    • ${b.name} ÷${b.total}คน = ฿${b.share.toFixed(2)}`));
+    });
+    
+    lines.push('', `รวมทั้งหมด: ฿${Object.values(totals).reduce((a, b) => a + b, 0).toFixed(2)}`, '');
+    if (pay) {
+      lines.push('── ช่องทางรับโอน ──');
+      lines.push(pay.type === 'promptpay' ? `📲 พร้อมเพย์: ${pay.number}` : `🏦 ${pay.label}\nเลขบัญชี: ${pay.number}`);
+      if (pay.name) lines.push(`ชื่อบัญชี: ${pay.name}`);
+    }
 
-  // Header gradient
-  const grad = ctx.createLinearGradient(0, 0, W, 0);
-  grad.addColorStop(0, '#1a2e1c');
-  grad.addColorStop(1, '#0d1a2a');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, headerH);
-  ctx.fillStyle = '#4ade80';
-  ctx.fillRect(0, headerH - 2, W, 2);
+    const text = lines.join('\n');
+    if (navigator.share) navigator.share({ text }).catch(e => console.log(e));
+    else navigator.clipboard.writeText(text).then(() => UI.showToast('📋 คัดลอกข้อความลง Clipboard แล้ว'));
+  },
 
-  ctx.font = '32px Kanit';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#4ade80';
-  ctx.fillText('💸 หารตัง', W / 2, 50);
+  saveImage() {
+    const errs = this.getValidationErrors();
+    if (errs.length) { UI.showDialog(errs); return; }
 
-  ctx.font = '500 16px Kanit';
-  ctx.fillStyle = '#64748b';
-  const now = new Date();
-  ctx.fillText(now.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' }), W/2, 78);
+    const { totals, breakdown } = AppState.calcSummary();
+    const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+    const pay = this.getPaymentInfo();
 
-  ctx.font = '600 13px Kanit';
-  ctx.fillStyle = '#22d3ee';
-  ctx.fillText('สรุปยอดค่าใช้จ่าย', W/2, 105);
+    const baseWidth = 480;
+    const lineH = 38;
+    const padding = 32;
+    const headerH = 140;
+    
+    const personH = AppState.friends.length * (lineH + 2);
+    const itemRows = Object.values(breakdown).reduce((s, bd) => s + bd.length, 0);
+    const breakH = itemRows * 28 + AppState.friends.length * 22;
+    const payH = pay ? (pay.name ? 96 : 74) : 0;
+    const footerH = 80;
+    const baseHeight = headerH + personH + breakH + payH + footerH + (padding * 2) + 40;
 
-  let y = headerH + 24;
+    const dpr = Math.max(window.devicePixelRatio || 1, 3); 
+    const canvas = document.getElementById('slipCanvas');
+    canvas.width = baseWidth * dpr;
+    canvas.height = baseHeight * dpr;
 
-  ctx.font = 'bold 13px Kanit';
-  ctx.fillStyle = '#3d4a60';
-  ctx.textAlign = 'left';
-  ctx.fillText('ชื่อ', padding, y);
-  ctx.textAlign = 'right';
-  ctx.fillText('ยอดรวม', W - padding, y);
-  y += 18;
-  ctx.fillStyle = '#1e2a3a';
-  ctx.fillRect(padding, y, W - padding*2, 1);
-  y += 16;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.scale(dpr, dpr);
+    
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-  friends.forEach((f, i) => {
-    const bg = i % 2 === 0 ? '#111820' : '#0d1117';
-    ctx.fillStyle = bg;
-    ctx.fillRect(padding - 8, y - 22, W - padding*2 + 16, lineH);
-    ctx.font = '600 15px Kanit';
-    ctx.fillStyle = '#e8edf5';
-    ctx.textAlign = 'left';
-    ctx.fillText(f, padding, y);
-    ctx.font = '600 15px IBM Plex Mono, monospace';
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, baseWidth, baseHeight);
+
+    const grad = ctx.createLinearGradient(0, 0, baseWidth, 0);
+    grad.addColorStop(0, '#1a2e1c'); grad.addColorStop(1, '#0d1a2a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, baseWidth, headerH);
     ctx.fillStyle = '#4ade80';
-    ctx.textAlign = 'right';
-    ctx.fillText('฿' + totals[f].toFixed(2), W - padding, y);
-    y += lineH + 2;
-  });
+    ctx.fillRect(0, headerH - 2, baseWidth, 2);
 
-  y += 8;
-  ctx.fillStyle = '#1e2a3a';
-  ctx.fillRect(padding, y, W - padding*2, 1);
-  y += 16;
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 32px Kanit, sans-serif';
+    ctx.textAlign = 'center'; ctx.fillStyle = '#4ade80';
+    ctx.fillText('💸 หารตัง', baseWidth / 2, 48);
 
-  friends.forEach(f => {
-    const bd = breakdown[f];
-    if (bd.length === 0) return;
-    ctx.font = '600 13px Kanit';
-    ctx.fillStyle = '#22d3ee';
-    ctx.textAlign = 'left';
-    ctx.fillText('📌 ' + f, padding, y);
-    y += 20;
-    bd.forEach(b => {
-      ctx.font = '400 12px Kanit';
-      ctx.fillStyle = '#a0aec0';
-      ctx.textAlign = 'left';
-      ctx.fillText('  ' + b.name + ' (÷' + b.total + 'คน)', padding + 10, y);
-      ctx.font = '500 12px IBM Plex Mono, monospace';
-      ctx.fillStyle = '#7dd3fc';
-      ctx.textAlign = 'right';
-      ctx.fillText('฿' + b.share.toFixed(2), W - padding, y);
-      y += 26;
+    ctx.font = '500 15px Kanit, sans-serif'; ctx.fillStyle = '#64748b';
+    ctx.fillText(new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }), baseWidth / 2, 84);
+
+    ctx.font = '600 14px Kanit, sans-serif'; ctx.fillStyle = '#22d3ee';
+    ctx.fillText('สรุปยอดค่าใช้จ่ายสำหรับทุกคน', baseWidth / 2, 112);
+
+    let y = headerH + 30;
+
+    ctx.font = 'bold 13px Kanit, sans-serif'; ctx.fillStyle = '#4f5e75';
+    ctx.textAlign = 'left'; ctx.fillText('ชื่อ', padding, y);
+    ctx.textAlign = 'right'; ctx.fillText('ยอดรวมที่ต้องจ่าย', baseWidth - padding, y);
+    y += 18;
+    ctx.fillStyle = '#1e2a3a'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
+    y += 16;
+
+    AppState.friends.forEach((f, i) => {
+      ctx.fillStyle = i % 2 === 0 ? '#121822' : '#0d1117';
+      ctx.fillRect(padding - 8, y - 20, baseWidth - padding * 2 + 16, lineH);
+      
+      ctx.font = '600 15px Kanit, sans-serif'; ctx.fillStyle = '#e8edf5';
+      ctx.textAlign = 'left'; ctx.fillText(f, padding, y);
+      
+      ctx.font = '600 16px "IBM Plex Mono", monospace'; ctx.fillStyle = '#4ade80';
+      ctx.textAlign = 'right'; ctx.fillText('฿' + totals[f].toFixed(2), baseWidth - padding, y);
+      y += lineH + 2;
     });
-    y += 4;
-  });
 
-  // Grand total bar
-  y += 10;
-  const gradT = ctx.createLinearGradient(0, y - 10, W, y + 50);
-  gradT.addColorStop(0, '#1a1f0a');
-  gradT.addColorStop(1, '#0d1a0a');
-  ctx.fillStyle = gradT;
-  ctx.fillRect(0, y - 10, W, 60);
-  ctx.fillStyle = '#f59e0b';
-  ctx.fillRect(0, y - 10, W, 2);
-  ctx.font = 'bold 14px Kanit';
-  ctx.fillStyle = '#a0aec0';
-  ctx.textAlign = 'left';
-  ctx.fillText('รวมทั้งหมด', padding, y + 22);
-  ctx.font = 'bold 22px IBM Plex Mono, monospace';
-  ctx.fillStyle = '#f59e0b';
-  ctx.textAlign = 'right';
-  ctx.fillText('฿' + grandTotal.toFixed(2), W - padding, y + 24);
-  y += 60;
+    y += 10;
+    ctx.fillStyle = '#1e2a3a'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
+    y += 20;
 
-  // Payment info block
-  if (pay) {
-    y += 12;
-    ctx.fillStyle = '#111c2a';
-    ctx.beginPath();
-    const r = 10, bx = padding - 8, bw = W - padding*2 + 16;
-    const bh = pay.type === 'promptpay' ? (pay.name ? 72 : 56) : 90;
-    ctx.moveTo(bx + r, y); ctx.lineTo(bx + bw - r, y);
-    ctx.arcTo(bx + bw, y, bx + bw, y + r, r);
-    ctx.lineTo(bx + bw, y + bh - r);
-    ctx.arcTo(bx + bw, y + bh, bx + bw - r, y + bh, r);
-    ctx.lineTo(bx + r, y + bh);
-    ctx.arcTo(bx, y + bh, bx, y + bh - r, r);
-    ctx.lineTo(bx, y + r);
-    ctx.arcTo(bx, y, bx + r, y, r);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#22d3ee33';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    AppState.friends.forEach(f => {
+      const bd = breakdown[f];
+      if (bd.length === 0) return;
+      ctx.font = '600 14px Kanit, sans-serif'; ctx.fillStyle = '#22d3ee';
+      ctx.textAlign = 'left'; ctx.fillText('📌 ' + f, padding, y);
+      y += 22;
+      
+      bd.forEach(b => {
+        ctx.font = '400 13px Kanit, sans-serif'; ctx.fillStyle = '#a0aec0';
+        ctx.textAlign = 'left'; ctx.fillText(`  • ${b.name} (÷${b.total}คน)`, padding + 8, y);
+        
+        ctx.font = '500 13px "IBM Plex Mono", monospace'; ctx.fillStyle = '#7dd3fc';
+        ctx.textAlign = 'right'; ctx.fillText('฿' + b.share.toFixed(2), baseWidth - padding, y);
+        y += 26;
+      });
+      y += 6;
+    });
 
-    ctx.font = '600 11px Kanit';
-    ctx.fillStyle = '#22d3ee';
-    ctx.textAlign = 'left';
-    ctx.fillText('โอนมาที่', padding, y + 18);
+    y += 10;
+    const gradT = ctx.createLinearGradient(0, y - 10, baseWidth, y + 50);
+    gradT.addColorStop(0, '#1a2211'); gradT.addColorStop(1, '#0c160c');
+    ctx.fillStyle = gradT; ctx.fillRect(0, y - 10, baseWidth, 60);
+    ctx.fillStyle = '#f59e0b'; ctx.fillRect(0, y - 10, baseWidth, 2);
 
-    if (pay.type === 'promptpay') {
-      ctx.font = '500 13px Kanit';
-      ctx.fillStyle = '#e8edf5';
-      ctx.textAlign = 'left';
-      ctx.fillText('📲 พร้อมเพย์', padding, y + 36);
-      ctx.font = '600 14px IBM Plex Mono, monospace';
-      ctx.fillStyle = '#4ade80';
-      ctx.textAlign = 'right';
-      ctx.fillText(pay.number, W - padding, y + 36);
-      if (pay.name) {
-        ctx.font = '400 12px Kanit';
-        ctx.fillStyle = '#a0aec0';
-        ctx.textAlign = 'left';
-        ctx.fillText('ชื่อ  ' + pay.name, padding, y + 56);
+    ctx.font = 'bold 15px Kanit, sans-serif'; ctx.fillStyle = '#a0aec0';
+    ctx.textAlign = 'left'; ctx.fillText('ยอดรวมสุทธิทั้งสิ้น', padding, y + 20);
+    
+    ctx.font = 'bold 24px "IBM Plex Mono", monospace'; ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = 'right'; ctx.fillText('฿' + grandTotal.toFixed(2), baseWidth - padding, y + 20);
+    y += 70;
+
+    if (pay) {
+      ctx.font = 'bold 13px Kanit, sans-serif'; ctx.fillStyle = '#51627a';
+      ctx.textAlign = 'left'; ctx.fillText('── ช่องทางการชำระเงินโอน ──', padding, y);
+      y += 24;
+
+      ctx.font = '600 15px Kanit, sans-serif'; ctx.fillStyle = '#e8edf5';
+      if (pay.type === 'promptpay') {
+        ctx.fillText(`📲 ${pay.label} : ${pay.number}`, padding, y);
+      } else {
+        ctx.fillText(`🏦 ${pay.label}`, padding, y); y += 22;
+        ctx.font = '600 15px "IBM Plex Mono", monospace';
+        ctx.fillText(`เลขที่บัญชี: ${pay.number}`, padding + 28, y);
       }
-    } else {
-      ctx.font = '500 13px Kanit';
-      ctx.fillStyle = '#e8edf5';
-      ctx.fillText('🏦 ' + pay.label, padding, y + 38);
-      ctx.font = '400 12px Kanit';
-      ctx.fillStyle = '#a0aec0';
-      ctx.fillText('เลขบัญชี', padding, y + 62);
-      ctx.font = '600 13px IBM Plex Mono, monospace';
-      ctx.fillStyle = '#4ade80';
-      ctx.textAlign = 'right';
-      ctx.fillText(pay.number, W - padding, y + 62);
       if (pay.name) {
-        ctx.font = '400 12px Kanit';
-        ctx.fillStyle = '#a0aec0';
-        ctx.textAlign = 'left';
-        ctx.fillText('ชื่อบัญชี  ' + pay.name, padding, y + 82);
+        y += 22; ctx.fillStyle = '#a0aec0'; ctx.font = '400 14px Kanit, sans-serif';
+        ctx.fillText(`ชื่อบัญชี: ${pay.name}`, padding + 28, y);
       }
+      y += 30;
     }
-    y += pay.type === 'promptpay' ? (pay.name ? 90 : 74) : 110;
+
+    ctx.fillStyle = '#1e2330'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
+    y += 26;
+    ctx.font = '300 13px Kanit, sans-serif'; ctx.fillStyle = '#4f5e75';
+    ctx.textAlign = 'center'; ctx.fillText('ขอบคุณที่ใช้บริการสรุปยอดสารตัง 💸', baseWidth / 2, y);
+
+    setTimeout(() => {
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const link = document.createElement('a');
+      link.download = `BillSummary-${new Date().toISOString().slice(0,10)}.jpg`;
+      link.href = dataUrl;
+      link.click();
+      this.showToast('🖼 บันทึกรูปลงอุปกรณ์เรียบร้อยแล้ว');
+    }, 100);
   }
+};
 
-  // Footer
-  y += 16;
-  ctx.font = '400 11px Kanit';
-  ctx.fillStyle = '#2d3548';
-  ctx.textAlign = 'center';
-  ctx.fillText('สร้างด้วย หารตัง App 💸', W / 2, y);
+// ─── INITIAL LISTENERS & INPUT VALIDATIONS ───
+document.addEventListener('DOMContentLoaded', () => {
+  const fInput = document.getElementById('friendInput');
+  const fBtn = document.getElementById('addFriendBtn');
+  fInput.addEventListener('input', () => {
+    fInput.value = fInput.value.replace(/[^ก-๙a-zA-Z\s]/g, '');
+    fBtn.disabled = fInput.value.trim() === '';
+  });
+  fInput.addEventListener('keydown', e => { if (e.key === 'Enter') AppState.addFriend(); });
 
-  // Share / save
-  canvas.toBlob(async (blob) => {
-    const file = new File([blob], 'หารตัง-สรุป.jpg', { type: 'image/jpeg' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'หารตัง สรุปยอด' });
-        showToast('✅ แชร์สลิปแล้ว');
-      } catch (err) {
-        if (err.name !== 'AbortError') fallbackDownload(canvas);
-      }
-    } else {
-      fallbackDownload(canvas);
-    }
-  }, 'image/jpeg', 0.95);
-}
+  const iInput = document.getElementById('itemInput');
+  iInput.addEventListener('input', function() {
+    // ปรับปรุง Regex ขัดเกลาข้อมูลขาเข้าให้พิมพ์ชื่อไทย/อังกฤษ ตัวเลข จุด และสเปซได้ปกติ
+    this.value = this.value.replace(/[^ก-๙a-zA-Z0-9\s\.\-]/g, '');
+  });
+  iInput.addEventListener('keydown', e => { if (e.key === 'Enter') AppState.addItem(); });
 
-function fallbackDownload(canvas) {
-  const link = document.createElement('a');
-  link.download = 'หารตัง-สรุป.jpg';
-  link.href = canvas.toDataURL('image/jpeg', 0.95);
-  link.click();
-  showToast('✅ บันทึกสลิปแล้ว');
-}
-
-// ─── TOAST ───
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// Init
-renderItems();
+  document.getElementById('accountNumber').addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g, '').slice(0, 14);
+  });
+  
+  document.getElementById('dialogOverlay').addEventListener('click', function(e) {
+    if (e.target === this) UI.closeDialog();
+  });
+});
 </script>
 </body>
 </html>
