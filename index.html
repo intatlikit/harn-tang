@@ -538,7 +538,7 @@
 <div class="preview-overlay" id="previewOverlay">
   <div class="preview-card">
     <div style="font-size:1.1rem;font-weight:600;color:var(--accent);margin-bottom:4px">✨ สลิปของคุณพร้อมแล้ว</div>
-    <p style="font-size:0.82rem;color:var(--text2);line-height:1.4">ระบบตรวจพบว่าคุณกำลังเปิดผ่านแอปพลิเคชัน<br><strong style="color:var(--accent3)">กรุณากดค้างที่รูปภาพด้านล่าง</strong> แล้วเลือก <strong style="color:var(--accent2)">"บันทึกรูปภาพ"</strong> ได้เลยครับ</p>
+    <p style="font-size:0.82rem;color:var(--text2);line-height:1.4">ระบบตรวจพบว่าคุณเปิดในหน้าแอปพลิเคชัน<br><strong style="color:var(--accent3)">กรุณากดค้างที่รูปภาพด้านล่าง</strong> แล้วเลือก <strong style="color:var(--accent2)">"บันทึกรูปภาพ"</strong> หรือแชร์ได้เลยครับ</p>
     <img id="previewImg" class="preview-img" alt="Bill Summary">
     <button class="btn btn-ghost" onclick="UI.closePreview()" style="width:100%;margin-top:16px;justify-content:center;padding:12px">ปิดหน้าต่างนี้</button>
   </div>
@@ -643,7 +643,6 @@ const AppState = {
 const UI = {
   escHtml: (str) => str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '',
 
-  // ฟังก์ชันจัดฟอร์แมตเงินตามสั่ง: คั่นหลักพัน ตัด .00 ทิ้ง และใส่หน่วยเป็นบาทต่อท้าย
   formatCurrencyText(num) {
     const formatted = num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     return `${formatted} บาท`;
@@ -834,13 +833,12 @@ const Actions = {
   },
 
   shareText() {
-    const { errors, totals, grandTotal, paymentInfo } = this.getValidationAndPayment();
+    const { errors, totals, paymentInfo } = this.getValidationAndPayment();
     if (errors.length) { UI.showDialog(errors); return; }
     
     let lines = ['💸 สรุปยอดหารตัง', ''];
-    // นำฟอร์แมตใหม่ (บาท) มาใส่แทนสัญลักษณ์ ฿
     AppState.friends.forEach(f => lines.push(`👤 ${f}  →  ${UI.formatCurrencyText(totals[f])}`));
-    lines.push('', `รวมทั้งหมด: ${UI.formatCurrencyText(grandTotal)}`, '');
+    lines.push('');
     
     if (paymentInfo) {
       lines.push('── ช่องทางรับโอน ──');
@@ -879,11 +877,9 @@ const Actions = {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // วาดพื้นหลังหลัก
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, baseWidth, baseHeight);
 
-    // ส่วนหัวสลิป
     const grad = ctx.createLinearGradient(0, 0, baseWidth, 0);
     grad.addColorStop(0, '#1a2e1c'); grad.addColorStop(1, '#0d1a2a');
     ctx.fillStyle = grad;
@@ -911,7 +907,6 @@ const Actions = {
     ctx.fillStyle = '#1e2a3a'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 16;
 
-    // ตารางแจกแจงชื่อรายบุคคล
     AppState.friends.forEach((f, i) => {
       ctx.fillStyle = i % 2 === 0 ? '#121822' : '#0d1117';
       ctx.fillRect(padding - 8, y - 20, baseWidth - padding * 2 + 16, lineH);
@@ -928,7 +923,6 @@ const Actions = {
     ctx.fillStyle = '#1e2a3a'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 20;
 
-    // รายการเมนูย่อยของแต่ละบุคคล
     AppState.friends.forEach(f => {
       const bd = breakdown[f];
       if (bd.length === 0) return;
@@ -947,7 +941,6 @@ const Actions = {
       y += 6;
     });
 
-    // สรุปยอดสุทธิ
     y += 10;
     const gradT = ctx.createLinearGradient(0, y - 10, baseWidth, y + 50);
     gradT.addColorStop(0, '#1a2211'); gradT.addColorStop(1, '#0c160c');
@@ -961,7 +954,6 @@ const Actions = {
     ctx.textAlign = 'right'; ctx.fillText('฿' + grandTotal.toFixed(2), baseWidth - padding, y + 20);
     y += 70;
 
-    // ส่วนข้อมูลรับโอนเงิน
     if (paymentInfo) {
       ctx.font = 'bold 13px Kanit, sans-serif'; ctx.fillStyle = '#51627a';
       ctx.textAlign = 'left'; ctx.fillText('── ช่องทางการชำระเงินโอน ──', padding, y);
@@ -982,81 +974,62 @@ const Actions = {
       y += 30;
     }
 
-    // ท้ายกระดาษ
     ctx.fillStyle = '#1e2330'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 26;
     ctx.font = '300 13px Kanit, sans-serif'; ctx.fillStyle = '#4f5e75';
     ctx.textAlign = 'center'; ctx.fillText('ขอบคุณที่ใช้บริการสรุปยอดหารตัง 💸', baseWidth / 2, y);
 
-    // ดำเนินการสร้างและดาวน์โหลดไฟล์รูปภาพ
+    // ─── [อัปเดตระบบดาวน์โหลดภาพแบบ HYBRID FLOW] ───
     setTimeout(async () => {
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const filename = `BillSummary-${new Date().toISOString().slice(0,10)}.jpg`;
 
-      // ตรวจสอบว่าเป็น In-App Browser (เช่น แชท Line, Facebook บนมือถือ) หรือไม่
+      // 1. ตรวจสอบเงื่อนไขว่าเป็น In-App Browser หรือไม่
       if (UI.isInAppBrowser()) {
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
         UI.showPreview(dataUrl);
         return;
       }
 
-      // ─── ฟังก์ชันเลือกที่เซฟรูปตาม Device (File System Access API) ───
-      if (window.showSaveFilePicker) {
-        try {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: filename,
-            types: [{
-              description: 'JPEG Image',
-              accept: { 'image/jpeg': ['.jpg', '.jpeg'] },
-            }],
-          });
-          
-          // แปลง DataURL เป็น Blob เพื่อเขียนลงไฟล์
-          const response = await fetch(dataUrl);
-          const blob = await response.blob();
-          
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          
-          UI.showToast('🖼 บันทึกรูปภาพสำเร็จแล้ว!');
-          return; // ทำงานสำเร็จ สิ้นสุดฟังก์ชัน
-        } catch (err) {
-          // หากผู้ใช้กด Cancel หน้าต่างบันทึกไฟล์ ไม่ต้องรันระบบดาวน์โหลดซ้ำ
-          if (err.name === 'AbortError') {
-            UI.showToast('❌ ยกเลิกการบันทึก');
-            return;
-          }
-          console.error(err);
-        }
-      }
-
-      // Fallback: ใช้การจำลองดาวน์โหลดแบบดั้งเดิม หากระบบ/อุปกรณ์ ไม่รองรับ FilePicker (เช่น Safari, iOS, Chrome มือถือบางรุ่น)
+      // 2. ถ้าอยู่บน Mobile Browser ทั่วไป ดึงพลังของ Web Share API ในการแชร์ไฟล์ภาพออกมา
       try {
-        const parts = dataUrl.split(';base64,');
-        const byteCharacters = atob(parts[1]);
-        const byteNumbers = new Array(byteCharacters.length).fill(0).map((_, i) => byteCharacters.charCodeAt(i));
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'image/jpeg' });
-        const blobUrl = URL.createObjectURL(blob);
+        canvas.toBlob(async (blob) => {
+          if (!blob) { UI.showToast('❌ ไม่สามารถสร้างไฟล์ภาพได้'); return; }
+          const file = new File([blob], filename, { type: 'image/jpeg' });
 
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = blobUrl;
-        document.body.appendChild(link);
-        link.click();
-        
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        }, 100);
+          // เช็กว่า Browser บนมือถือ ณ ขณะนั้นรองรับการแชร์ไฟล์ไหม
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'สรุปยอดหารตัง',
+                text: 'สลิปสรุปยอดค่าใช้จ่าย'
+              });
+              UI.showToast('✨ เปิดหน้าแชร์สำเร็จ');
+            } catch (shareErr) {
+              // ดักเคสผู้ใช้กดยกเลิกกลางคัน (Abort) หรือแชร์ล้มเหลว ให้ดีดไปเปิด Preview แทน
+              if (shareErr.name !== 'AbortError') {
+                const fallbackDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+                UI.showPreview(fallbackDataUrl);
+              }
+            }
+          } else {
+            // ถ้า Browser เก่าหรือไม่รองรับ canShare ไฟล์ (เช่น PC บราวเซอร์รุ่นเก่า) ให้ดาวน์โหลดแบบเดิม
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            UI.showToast('🖼 บันทึกรูปลงเครื่องเรียบร้อยแล้ว');
+          }
+        }, 'image/jpeg', 0.90);
 
-        UI.showToast('🖼 บันทึกรูปลงเครื่องเรียบร้อยแล้ว');
-      } catch (e) {
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = dataUrl;
-        link.click();
-        UI.showToast('🖼 บันทึกรูปลงเครื่องเรียบร้อยแล้ว');
+      } catch (err) {
+        console.error(err);
+        // Fallback ขั้นสุดถ้าเกิด Error ขึ้นมาดื้อๆ
+        const fallbackDataUrl = canvas.toDataURL('image/jpeg', 0.90);
+        UI.showPreview(fallbackDataUrl);
       }
     }, 100);
   }
