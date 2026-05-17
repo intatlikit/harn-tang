@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>หารตัง 💸</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161a22;
+    --surface2: #1e2330;
+    --surface3: #252c3a;
+    --border: #2d3548;
+    --border2: #3d4a60;
+    --accent: #4ade80;
+    --accent2: #22d3ee;
+    --accent3: #f59e0b;
+    --danger: #f87171;
+    --text: #e8edf5;
+    --text2: #a0aec0;
+    --text3: #64748b;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Kanit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(74,222,128,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(34,211,238,0.04) 0%, transparent 50%);
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 32px 0 28px;
+  }
+  .header-icon {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 8px;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    color: var(--text3);
+    font-size: 0.9rem;
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title span { color: var(--accent); }
+
+  /* INPUT ROW */
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .input-field {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-field::placeholder { color: var(--text3); }
+  .input-field:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(34,211,238,0.1);
+  }
+  .input-field:invalid { border-color: var(--danger); }
+
+  /* BUTTONS */
+  .btn {
+    padding: 11px 18px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #22c55e);
+    color: #0a1a0e;
+  }
+  .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 0 16px rgba(74,222,128,0.3); }
+  .btn-primary:disabled {
+    background: var(--surface3);
+    color: var(--text3);
+    cursor: not-allowed;
+    filter: none;
+    box-shadow: none;
+  }
+  .btn-danger {
+    background: rgba(248,113,113,0.12);
+    color: var(--danger);
+    border: 1px solid rgba(248,113,113,0.2);
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+  .btn-danger:hover { background: rgba(248,113,113,0.22); }
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 0.82rem;
+  }
+  .btn-ghost:hover { background: var(--surface3); color: var(--text); }
+  .btn-accent2 {
+    background: linear-gradient(135deg, var(--accent2), #0891b2);
+    color: #0a1a1e;
+    padding: 13px 22px;
+    font-size: 1rem;
+  }
+  .btn-accent2:hover { filter: brightness(1.1); box-shadow: 0 0 16px rgba(34,211,238,0.3); }
+  .btn-amber {
+    background: linear-gradient(135deg, var(--accent3), #d97706);
+    color: #1a1000;
+    padding: 13px 22px;
+    font-size: 1rem;
+  }
+  .btn-amber:hover { filter: brightness(1.1); box-shadow: 0 0 16px rgba(245,158,11,0.3); }
+
+  /* FRIEND TAGS */
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .tag {
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 5px 12px 5px 14px;
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: tagIn 0.25s ease;
+  }
+  @keyframes tagIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .tag-remove {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+  }
+  .tag-remove:hover { color: var(--danger); }
+
+  /* ITEMS */
+  .item-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 10px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .item-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text);
+  }
+  .item-price {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.05rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .item-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .person-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .person-toggle {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: var(--surface3);
+    color: var(--text2);
+    font-family: 'Kanit', sans-serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .person-toggle.selected {
+    background: rgba(74,222,128,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .person-toggle:hover:not(.selected) { border-color: var(--border2); background: var(--surface); }
+  .no-friends { color: var(--text3); font-size: 0.85rem; font-style: italic; }
+
+  /* SUMMARY */
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+  }
+  .summary-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-row { cursor: pointer; transition: background 0.15s; }
+  .summary-row:hover td { background: var(--surface3); }
+  .person-name-cell {
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .expand-icon { color: var(--text3); font-size: 0.7rem; transition: transform 0.2s; }
+  .expand-icon.open { transform: rotate(90deg); }
+  .amount-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--accent);
+    text-align: right;
+  }
+  .breakdown-row td {
+    padding: 0;
+    border-bottom: none;
+  }
+  .breakdown-content {
+    background: var(--bg);
+    border-radius: 8px;
+    margin: 0 6px 8px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+  }
+  .breakdown-content.open { max-height: 400px; }
+  .breakdown-inner {
+    padding: 10px 14px;
+  }
+  .breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.85rem;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .breakdown-item:last-child { border-bottom: none; }
+  .breakdown-item-price {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent2);
+  }
+
+  .total-row td {
+    padding-top: 12px;
+    border-top: 2px solid var(--border2);
+    border-bottom: none;
+  }
+
+  /* ACTION BUTTONS */
+  .action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .action-row .btn { flex: 1; justify-content: center; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--text3);
+    font-size: 0.9rem;
+  }
+  .empty-state span { display: block; font-size: 2rem; margin-bottom: 8px; }
+
+  /* DIVIDER */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* CANVAS SLIP */
+  #slipCanvas { display: none; }
+
+  @media (max-width: 480px) {
+    .header h1 { font-size: 1.7rem; }
+    .btn-accent2, .btn-amber { padding: 12px 16px; font-size: 0.9rem; }
+    .action-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <span class="header-icon">💸</span>
+    <h1>หารตัง</h1>
+    <p>แชร์ค่าใช้จ่ายกับเพื่อนๆ ง่ายๆ</p>
+  </div>
+
+  <!-- FRIENDS -->
+  <div class="card">
+    <div class="card-title"><span>👥</span> รายชื่อเพื่อน</div>
+    <div class="input-row">
+      <input id="friendInput" class="input-field" type="text" placeholder="กรอกชื่อเพื่อน" maxlength="20" autocomplete="off">
+      <button class="btn btn-primary" id="addFriendBtn" onclick="addFriend()" disabled>+ เพิ่ม</button>
+    </div>
+    <div class="tags-container" id="friendTags"></div>
+  </div>
+
+  <!-- ITEMS -->
+  <div class="card">
+    <div class="card-title"><span>🧾</span> รายการ</div>
+    <div class="input-row">
+      <input id="itemInput" class="input-field" type="text" placeholder="กรอกรายการ เว้นวรรค ราคา เช่น เบียร์ 400" autocomplete="off" maxlength="60">
+      <button class="btn btn-primary" id="addItemBtn" onclick="addItem()" disabled>+ เพิ่ม</button>
+    </div>
+    <div id="itemsList"></div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="card" id="summaryCard" style="display:none">
+    <div class="card-title"><span>📊</span> สรุปยอด</div>
+    <table class="summary-table" id="summaryTable"></table>
+    <div class="divider"></div>
+    <div class="action-row">
+      <button class="btn btn-accent2" onclick="shareText()">📤 แชร์ข้อความ</button>
+      <button class="btn btn-amber" onclick="saveImage()">💾 บันทึกสลิป</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<canvas id="slipCanvas"></canvas>
+
+<script>
+let friends = [];
+let items = [];
+let openBreakdowns = new Set();
+
+// ─── FRIEND INPUT ───
+const friendInput = document.getElementById('friendInput');
+const addFriendBtn = document.getElementById('addFriendBtn');
+
+friendInput.addEventListener('input', () => {
+  // Only letters (Thai + English)
+  friendInput.value = friendInput.value.replace(/[^ก-๙a-zA-Z\s]/g, '');
+  addFriendBtn.disabled = friendInput.value.trim() === '';
+});
+friendInput.addEventListener('keydown', e => { if(e.key === 'Enter') addFriend(); });
+
+function addFriend() {
+  const name = friendInput.value.trim();
+  if (!name) return;
+  if (friends.includes(name)) { showToast('⚠️ มีชื่อนี้แล้ว'); return; }
+  friends.push(name);
+  friendInput.value = '';
+  addFriendBtn.disabled = true;
+  renderFriendTags();
+  renderItems();
+  renderSummary();
+}
+
+function removeFriend(name) {
+  friends = friends.filter(f => f !== name);
+  items.forEach(item => { item.people = item.people.filter(p => p !== name); });
+  renderFriendTags();
+  renderItems();
+  renderSummary();
+}
+
+function renderFriendTags() {
+  const container = document.getElementById('friendTags');
+  container.innerHTML = friends.map(f => `
+    <div class="tag">
+      <span>${f}</span>
+      <button class="tag-remove" onclick="removeFriend('${f}')" title="ลบ">×</button>
+    </div>
+  `).join('');
+}
+
+// ─── ITEM INPUT ───
+const itemInput = document.getElementById('itemInput');
+const addItemBtn = document.getElementById('addItemBtn');
+
+itemInput.addEventListener('input', () => {
+  // Allow Thai, English letters, numbers, and spaces only
+  itemInput.value = itemInput.value.replace(/[^ก-๙a-zA-Z0-9\s]/g, '');
+  validateItemInput();
+});
+itemInput.addEventListener('keydown', e => { if(e.key === 'Enter') addItem(); });
+
+function validateItemInput() {
+  const val = itemInput.value.trim();
+  const parts = val.split(/\s+/);
+  const price = parseFloat(parts[parts.length - 1]);
+  addItemBtn.disabled = !(parts.length >= 2 && !isNaN(price) && price > 0 && val !== '');
+}
+
+function addItem() {
+  const val = itemInput.value.trim();
+  const parts = val.split(/\s+/);
+  const price = parseFloat(parts[parts.length - 1]);
+  if (parts.length < 2 || isNaN(price) || price <= 0) { showToast('⚠️ กรอก ชื่อรายการ เว้นวรรค ราคา'); return; }
+  const name = parts.slice(0, -1).join(' ');
+  items.push({ id: Date.now(), name, price, people: [] });
+  itemInput.value = '';
+  addItemBtn.disabled = true;
+  renderItems();
+  renderSummary();
+}
+
+function removeItem(id) {
+  items = items.filter(i => i.id !== id);
+  renderItems();
+  renderSummary();
+}
+
+function togglePerson(itemId, person) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  if (item.people.includes(person)) item.people = item.people.filter(p => p !== person);
+  else item.people.push(person);
+  renderItems();
+  renderSummary();
+}
+
+function selectAll(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.people = [...friends];
+  renderItems();
+  renderSummary();
+}
+
+function deselectAll(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.people = [];
+  renderItems();
+  renderSummary();
+}
+
+function renderItems() {
+  const container = document.getElementById('itemsList');
+  if (items.length === 0) {
+    container.innerHTML = '<div class="empty-state"><span>🧾</span>ยังไม่มีรายการ</div>';
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="item-card">
+      <div class="item-header">
+        <div class="item-name">${escHtml(item.name)}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="item-price">฿${item.price.toLocaleString()}</span>
+          <button class="btn btn-danger" onclick="removeItem(${item.id})">🗑</button>
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-ghost" onclick="selectAll(${item.id})">✅ เลือกทุกคน</button>
+        <button class="btn btn-ghost" onclick="deselectAll(${item.id})">⬜ ยกเลิกทุกคน</button>
+      </div>
+      ${friends.length === 0
+        ? '<p class="no-friends">เพิ่มเพื่อนก่อนเลยนะ 👆</p>'
+        : `<div class="person-toggles">
+            ${friends.map(f => `
+              <button class="person-toggle ${item.people.includes(f) ? 'selected' : ''}"
+                onclick="togglePerson(${item.id}, '${f}')">
+                ${item.people.includes(f) ? '✓ ' : ''}${escHtml(f)}
+              </button>
+            `).join('')}
+          </div>`
+      }
+    </div>
+  `).join('');
+}
+
+// ─── SUMMARY ───
+function calcSummary() {
+  const totals = {};
+  const breakdown = {};
+  friends.forEach(f => { totals[f] = 0; breakdown[f] = []; });
+  items.forEach(item => {
+    if (item.people.length === 0) return;
+    const share = item.price / item.people.length;
+    item.people.forEach(p => {
+      if (totals[p] !== undefined) {
+        totals[p] += share;
+        breakdown[p].push({ name: item.name, price: item.price, share, total: item.people.length });
+      }
+    });
+  });
+  return { totals, breakdown };
+}
+
+function renderSummary() {
+  const card = document.getElementById('summaryCard');
+  if (friends.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const { totals, breakdown } = calcSummary();
+  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+  const table = document.getElementById('summaryTable');
+
+  let html = `<thead><tr>
+    <th>ชื่อ</th>
+    <th style="text-align:right">ยอดรวม</th>
+  </tr></thead><tbody>`;
+
+  friends.forEach(f => {
+    const isOpen = openBreakdowns.has(f);
+    html += `
+      <tr class="summary-row" onclick="toggleBreakdown('${f}')">
+        <td><div class="person-name-cell">
+          <span class="expand-icon ${isOpen ? 'open' : ''}">▶</span>
+          ${escHtml(f)}
+        </div></td>
+        <td class="amount-cell">฿${totals[f].toFixed(2)}</td>
+      </tr>
+      <tr class="breakdown-row">
+        <td colspan="2">
+          <div class="breakdown-content ${isOpen ? 'open' : ''}" id="bd-${f}">
+            <div class="breakdown-inner">
+              ${breakdown[f].length === 0
+                ? '<p style="color:var(--text3);font-size:0.85rem">ยังไม่มีรายการ</p>'
+                : breakdown[f].map(b => `
+                  <div class="breakdown-item">
+                    <span>${escHtml(b.name)} <span style="color:var(--text3);font-size:0.78rem">(÷${b.total}คน)</span></span>
+                    <span class="breakdown-item-price">฿${b.share.toFixed(2)}</span>
+                  </div>
+                `).join('')
+              }
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  });
+
+  html += `<tr class="total-row">
+    <td style="font-weight:700;color:var(--text)">รวมทั้งหมด</td>
+    <td style="font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:1.1rem;color:var(--accent3);text-align:right">฿${grandTotal.toFixed(2)}</td>
+  </tr>`;
+  html += '</tbody>';
+  table.innerHTML = html;
+}
+
+function toggleBreakdown(name) {
+  if (openBreakdowns.has(name)) openBreakdowns.delete(name);
+  else openBreakdowns.add(name);
+  renderSummary();
+}
+
+// ─── SHARE TEXT ───
+function shareText() {
+  const { totals } = calcSummary();
+  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+  let text = '💸 สรุปหารตัง\n';
+  text += '─'.repeat(24) + '\n';
+  friends.forEach(f => {
+    text += `${f.padEnd(12)} ฿${totals[f].toFixed(2)}\n`;
+  });
+  text += '─'.repeat(24) + '\n';
+  text += `รวมทั้งหมด ฿${grandTotal.toFixed(2)}\n`;
+  text += '\n📲 หารตัง App';
+
+  if (navigator.share) {
+    navigator.share({ text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('📋 คัดลอกข้อความแล้ว'));
+  }
+}
+
+// ─── SAVE IMAGE (slip style) ───
+function saveImage() {
+  const { totals, breakdown } = calcSummary();
+  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+
+  const W = 480;
+  const lineH = 36;
+  const padding = 32;
+  const headerH = 130;
+  const personH = friends.length * (lineH + 2);
+  const itemRows = Object.values(breakdown).reduce((s, bd) => s + bd.length, 0);
+  const breakH = itemRows * 28 + friends.length * 20;
+  const footH = 80;
+  const totalH = headerH + personH + 20 + breakH + footH + padding * 2 + 40;
+
+  const canvas = document.getElementById('slipCanvas');
+  canvas.width = W;
+  canvas.height = totalH;
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, totalH);
+
+  // Header gradient
+  const grad = ctx.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, '#1a2e1c');
+  grad.addColorStop(1, '#0d1a2a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, headerH);
+
+  // Header border
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(0, headerH - 2, W, 2);
+
+  // Logo & title
+  ctx.font = '32px Kanit';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#4ade80';
+  ctx.fillText('💸 หารตัง', W / 2, 50);
+
+  ctx.font = '500 16px Kanit';
+  ctx.fillStyle = '#64748b';
+  const now = new Date();
+  ctx.fillText(now.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' }), W/2, 78);
+
+  ctx.font = '600 13px Kanit';
+  ctx.fillStyle = '#22d3ee';
+  ctx.fillText('สรุปยอดค่าใช้จ่าย', W/2, 105);
+
+  // ─── Person rows ───
+  let y = headerH + 24;
+
+  ctx.font = 'bold 13px Kanit';
+  ctx.fillStyle = '#3d4a60';
+  ctx.textAlign = 'left';
+  ctx.fillText('ชื่อ', padding, y);
+  ctx.textAlign = 'right';
+  ctx.fillText('ยอดรวม', W - padding, y);
+  y += 18;
+  ctx.fillStyle = '#1e2a3a';
+  ctx.fillRect(padding, y, W - padding*2, 1);
+  y += 16;
+
+  friends.forEach((f, i) => {
+    const bg = i % 2 === 0 ? '#111820' : '#0d1117';
+    ctx.fillStyle = bg;
+    ctx.fillRect(padding - 8, y - 22, W - padding*2 + 16, lineH);
+
+    ctx.font = '600 15px Kanit';
+    ctx.fillStyle = '#e8edf5';
+    ctx.textAlign = 'left';
+    ctx.fillText(f, padding, y);
+
+    ctx.font = '600 15px IBM Plex Mono, monospace';
+    ctx.fillStyle = '#4ade80';
+    ctx.textAlign = 'right';
+    ctx.fillText('฿' + totals[f].toFixed(2), W - padding, y);
+
+    y += lineH + 2;
+  });
+
+  y += 8;
+  ctx.fillStyle = '#1e2a3a';
+  ctx.fillRect(padding, y, W - padding*2, 1);
+  y += 16;
+
+  // ─── Breakdown by person ───
+  friends.forEach(f => {
+    const bd = breakdown[f];
+    if (bd.length === 0) return;
+
+    ctx.font = '600 13px Kanit';
+    ctx.fillStyle = '#22d3ee';
+    ctx.textAlign = 'left';
+    ctx.fillText(`📌 ${f}`, padding, y);
+    y += 20;
+
+    bd.forEach(b => {
+      ctx.font = '400 12px Kanit';
+      ctx.fillStyle = '#a0aec0';
+      ctx.textAlign = 'left';
+      ctx.fillText(`  ${b.name} (÷${b.total}คน)`, padding + 10, y);
+      ctx.font = '500 12px IBM Plex Mono, monospace';
+      ctx.fillStyle = '#7dd3fc';
+      ctx.textAlign = 'right';
+      ctx.fillText('฿' + b.share.toFixed(2), W - padding, y);
+      y += 26;
+    });
+    y += 4;
+  });
+
+  // ─── Grand total ───
+  y += 10;
+  const gradT = ctx.createLinearGradient(0, y - 10, W, y + 50);
+  gradT.addColorStop(0, '#1a1f0a');
+  gradT.addColorStop(1, '#0d1a0a');
+  ctx.fillStyle = gradT;
+  ctx.fillRect(0, y - 10, W, 60);
+
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(0, y - 10, W, 2);
+
+  ctx.font = 'bold 14px Kanit';
+  ctx.fillStyle = '#a0aec0';
+  ctx.textAlign = 'left';
+  ctx.fillText('รวมทั้งหมด', padding, y + 22);
+
+  ctx.font = 'bold 22px IBM Plex Mono, monospace';
+  ctx.fillStyle = '#f59e0b';
+  ctx.textAlign = 'right';
+  ctx.fillText('฿' + grandTotal.toFixed(2), W - padding, y + 24);
+
+  y += 60;
+
+  // Footer
+  ctx.font = '400 11px Kanit';
+  ctx.fillStyle = '#2d3548';
+  ctx.textAlign = 'center';
+  ctx.fillText('สร้างด้วย หารตัง App 💸', W / 2, y + 20);
+
+  // Download
+  const link = document.createElement('a');
+  link.download = 'หารตัง-สรุป.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  showToast('✅ บันทึกสลิปแล้ว');
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init
+renderItems();
+</script>
+</body>
+</html>
