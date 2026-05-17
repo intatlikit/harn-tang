@@ -643,6 +643,12 @@ const AppState = {
 const UI = {
   escHtml: (str) => str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '',
 
+  // ฟังก์ชันจัดฟอร์แมตเงินตามสั่ง: คั่นหลักพัน ตัด .00 ทิ้ง และใส่หน่วยเป็นบาทต่อท้าย
+  formatCurrencyText(num) {
+    const formatted = num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return `${formatted} บาท`;
+  },
+
   showToast(msg) {
     const toast = document.getElementById('toast');
     toast.textContent = msg;
@@ -832,8 +838,9 @@ const Actions = {
     if (errors.length) { UI.showDialog(errors); return; }
     
     let lines = ['💸 สรุปยอดหารตัง', ''];
-    AppState.friends.forEach(f => lines.push(`👤 ${f}  →  ฿${totals[f].toFixed(2)}`));
-    lines.push('', `รวมทั้งหมด: ฿${grandTotal.toFixed(2)}`, '');
+    // นำฟอร์แมตใหม่ (บาท) มาใส่แทนสัญลักษณ์ ฿
+    AppState.friends.forEach(f => lines.push(`👤 ${f}  →  ${UI.formatCurrencyText(totals[f])}`));
+    lines.push('', `รวมทั้งหมด: ${UI.formatCurrencyText(grandTotal)}`, '');
     
     if (paymentInfo) {
       lines.push('── ช่องทางรับโอน ──');
@@ -846,7 +853,7 @@ const Actions = {
     else navigator.clipboard.writeText(text).then(() => UI.showToast('📋 คัดลอกข้อความลง Clipboard แล้ว'));
   },
 
-  saveImage() {
+  async saveImage() {
     const { errors, totals, breakdown, grandTotal, paymentInfo } = this.getValidationAndPayment();
     if (errors.length) { UI.showDialog(errors); return; }
 
@@ -979,18 +986,51 @@ const Actions = {
     ctx.fillStyle = '#1e2330'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 26;
     ctx.font = '300 13px Kanit, sans-serif'; ctx.fillStyle = '#4f5e75';
-    ctx.textAlign = 'center'; ctx.fillText('ขอบคุณที่ใช้บริการสรุปยอดสารตัง 💸', baseWidth / 2, y);
+    ctx.textAlign = 'center'; ctx.fillText('ขอบคุณที่ใช้บริการสรุปยอดหารตัง 💸', baseWidth / 2, y);
 
-    // ดำเนินการสร้างไฟล์รูปภาพหลังวาดเสร็จ
-    setTimeout(() => {
+    // ดำเนินการสร้างและดาวน์โหลดไฟล์รูปภาพ
+    setTimeout(async () => {
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const filename = `BillSummary-${new Date().toISOString().slice(0,10)}.jpg`;
 
+      // ตรวจสอบว่าเป็น In-App Browser (เช่น แชท Line, Facebook บนมือถือ) หรือไม่
       if (UI.isInAppBrowser()) {
         UI.showPreview(dataUrl);
         return;
       }
 
+      // ─── ฟังก์ชันเลือกที่เซฟรูปตาม Device (File System Access API) ───
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: filename,
+            types: [{
+              description: 'JPEG Image',
+              accept: { 'image/jpeg': ['.jpg', '.jpeg'] },
+            }],
+          });
+          
+          // แปลง DataURL เป็น Blob เพื่อเขียนลงไฟล์
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          
+          UI.showToast('🖼 บันทึกรูปภาพสำเร็จแล้ว!');
+          return; // ทำงานสำเร็จ สิ้นสุดฟังก์ชัน
+        } catch (err) {
+          // หากผู้ใช้กด Cancel หน้าต่างบันทึกไฟล์ ไม่ต้องรันระบบดาวน์โหลดซ้ำ
+          if (err.name === 'AbortError') {
+            UI.showToast('❌ ยกเลิกการบันทึก');
+            return;
+          }
+          console.error(err);
+        }
+      }
+
+      // Fallback: ใช้การจำลองดาวน์โหลดแบบดั้งเดิม หากระบบ/อุปกรณ์ ไม่รองรับ FilePicker (เช่น Safari, iOS, Chrome มือถือบางรุ่น)
       try {
         const parts = dataUrl.split(';base64,');
         const byteCharacters = atob(parts[1]);
@@ -1010,13 +1050,13 @@ const Actions = {
           URL.revokeObjectURL(blobUrl);
         }, 100);
 
-        UI.showToast('🖼 บันทึกรูปลงอุปกรณ์เรียบร้อยแล้ว');
+        UI.showToast('🖼 บันทึกรูปลงเครื่องเรียบร้อยแล้ว');
       } catch (e) {
         const link = document.createElement('a');
         link.download = filename;
         link.href = dataUrl;
         link.click();
-        UI.showToast('🖼 บันทึกรูปลงอุปกรณ์เรียบร้อยแล้ว');
+        UI.showToast('🖼 บันทึกรูปลงเครื่องเรียบร้อยแล้ว');
       }
     }, 100);
   }
