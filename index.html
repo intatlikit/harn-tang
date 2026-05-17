@@ -383,6 +383,38 @@
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
 
+  /* PREVIEW OVERLAY (FOR IN-APP BROWSER FALLBACK) */
+  .preview-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .preview-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .preview-img {
+    width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-top: 12px;
+    border: 1px solid var(--border);
+  }
+
   /* CANVAS SLIP */
   #slipCanvas { display: none; }
 
@@ -502,6 +534,16 @@
   </div>
 </div>
 
+<!-- FALLBACK IMAGE PREVIEW DIALOG FOR IN-APP BROWSER -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-card">
+    <div style="font-size:1.1rem;font-weight:600;color:var(--accent);margin-bottom:4px">✨ สลิปของคุณพร้อมแล้ว</div>
+    <p style="font-size:0.82rem;color:var(--text2);line-height:1.4">ระบบตรวจพบว่าคุณกำลังเปิดผ่านแอปพลิเคชัน<br><strong style="color:var(--accent3)">กรุณากดค้างที่รูปภาพด้านล่าง</strong> แล้วเลือก <strong style="color:var(--accent2)">"บันทึกรูปภาพ"</strong> ได้เลยครับ</p>
+    <img id="previewImg" class="preview-img" alt="Bill Summary">
+    <button class="btn btn-ghost" onclick="UI.closePreview()" style="width:100%;margin-top:16px;justify-content:center;padding:12px">ปิดหน้าต่างนี้</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <canvas id="slipCanvas"></canvas>
 
@@ -527,7 +569,9 @@ const AppState = {
         }
       });
     });
-    return { totals, breakdown };
+
+    const grandTotal = Object.values(totals).reduce((sum, val) => sum + val, 0);
+    return { totals, breakdown, grandTotal };
   },
 
   addFriend() {
@@ -553,10 +597,7 @@ const AppState = {
     
     if (!val) { UI.showToast('⚠️ กรุณากรอก ชื่อรายการ และ ราคา ก่อนกดเพิ่มครับ'); return; }
 
-    // ─── NEW REGEX PARSING LOGIC ───
-    // ค้นหากลุ่มตัวเลขท้ายประโยค (รองรับทศนิยม เช่น 40, 120.50, .5) โดยไม่สนใจว่าข้างหน้าจะมีสเปซหรือไม่
     const match = val.match(/^(.*?)\s*(\d*\.?\d+)$/);
-    
     if (!match) {
       UI.showToast('⚠️ ลืมใส่ราคาหรือเปล่า? ตัวอย่าง: ส้มตำ40 หรือ ส้มตำ 40');
       return;
@@ -565,7 +606,6 @@ const AppState = {
     const name = match[1].trim();
     const price = parseFloat(match[2]);
 
-    // ป้องกันเคสที่กรอกแต่ตัวเลขอย่างเดียว หรือราคาเป็น 0 / หาค่าไม่ได้
     if (!name || isNaN(price) || price <= 0) {
       UI.showToast('⚠️ รูปแบบไม่ถูกต้อง กรุณาใส่ชื่อรายการตามด้วยราคา เช่น เบียร์ 500');
       return;
@@ -589,27 +629,19 @@ const AppState = {
     UI.renderAll();
   },
 
-  selectAll(itemId) {
+  setAllPeopleForRequirement(itemId, isSelectAll) {
     const item = this.items.find(i => i.id === itemId);
     if (!item) return;
-    item.people = [...this.friends];
+    item.people = isSelectAll ? [...this.friends] : [];
     UI.renderAll();
   },
-
-  deselectAll(itemId) {
-    const item = this.items.find(i => i.id === itemId);
-    if (!item) return;
-    item.people = [];
-    UI.renderAll();
-  }
+  selectAll(itemId) { this.setAllPeopleForRequirement(itemId, true); },
+  deselectAll(itemId) { this.setAllPeopleForRequirement(itemId, false); }
 };
 
 // ─── UI RENDERER & INTERACTION ───
 const UI = {
-  escHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-  },
+  escHtml: (str) => str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '',
 
   showToast(msg) {
     const toast = document.getElementById('toast');
@@ -630,9 +662,10 @@ const UI = {
     overlay.style.display = 'flex';
   },
 
-  closeDialog() {
-    document.getElementById('dialogOverlay').style.display = 'none';
-  },
+  closeDialog: () => document.getElementById('dialogOverlay').style.display = 'none',
+  isInAppBrowser: () => /FBAN|FBAV|Line|GSA/i.test(navigator.userAgent || navigator.vendor || window.opera),
+  showPreview: (dataUrl) => { document.getElementById('previewImg').src = dataUrl; document.getElementById('previewOverlay').style.display = 'flex'; },
+  closePreview: () => document.getElementById('previewOverlay').style.display = 'none',
 
   onBankTypeChange() {
     const type = document.getElementById('bankType').value;
@@ -707,8 +740,7 @@ const UI = {
     if (AppState.friends.length === 0 && AppState.items.length === 0) { card.style.display = 'none'; return; }
     card.style.display = 'block';
 
-    const { totals, breakdown } = AppState.calcSummary();
-    const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+    const { totals, breakdown, grandTotal } = AppState.calcSummary();
     
     let html = `<thead><tr><th>ชื่อ</th><th style="text-align:right">ยอดรวม</th></tr></thead><tbody>`;
     AppState.friends.forEach(f => {
@@ -755,61 +787,58 @@ const UI = {
 
 // ─── ACTIONS (SHARE & SAVE IMAGE) ───
 const Actions = {
-  getValidationErrors() {
+  getValidationAndPayment() {
     const errors = [];
+    const { totals, breakdown, grandTotal } = AppState.calcSummary();
+
     if (AppState.friends.length === 0) {
       errors.push({ icon: '👥', text: 'ยังไม่มีเพื่อนในระบบ' });
-    } else {
-      const { totals } = AppState.calcSummary();
-      if (Object.values(totals).reduce((a, b) => a + b, 0) === 0) 
-        errors.push({ icon: '🧾', text: 'ยอดรวมเป็น 0 — กรุณาเลือกคนหารในแต่ละรายการก่อนนะ' });
+    } else if (grandTotal === 0) {
+      errors.push({ icon: '🧾', text: 'ยอดรวมเป็น 0 — กรุณาเลือกคนหารในแต่ละรายการก่อนนะ' });
     }
 
     const type = document.getElementById('bankType').value;
+    const acctNo = document.getElementById('accountNumber').value.trim();
+    let paymentInfo = null;
+
     if (!type) {
       errors.push({ icon: '🏦', text: 'เลือกช่องทางรับโอน (พร้อมเพย์ หรือ ธนาคาร)' });
     } else {
-      const acct = document.getElementById('accountNumber').value.trim();
-      if (!acct) errors.push({ icon: '🔢', text: type === 'promptpay' ? 'กรอกเบอร์โทร / เลขบัตรพร้อมเพย์' : 'กรอกหมายเลขบัญชีธนาคาร' });
+      if (!acctNo) errors.push({ icon: '🔢', text: type === 'promptpay' ? 'กรอกเบอร์โทร / เลขบัตรพร้อมเพย์' : 'กรอกหมายเลขบัญชีธนาคาร' });
       
       if (type === 'bank') {
-        if (!document.getElementById('bankName').value) errors.push({ icon: '🏦', text: 'เลือกธนาคาร' });
-        else if (document.getElementById('bankName').value === 'other' && !document.getElementById('bankOtherName').value.trim()) errors.push({ icon: '✏️', text: 'ระบุชื่อธนาคารอื่น ๆ' });
-        if (!document.getElementById('accountName').value.trim()) errors.push({ icon: '👤', text: 'กรอกชื่อบัญชี' });
-      } else if (type === 'promptpay' && !document.getElementById('promptpayName').value.trim()) {
-        errors.push({ icon: '👤', text: 'กรอกชื่อเจ้าของพร้อมเพย์' });
+        const bName = document.getElementById('bankName').value;
+        const oName = document.getElementById('bankOtherName').value.trim();
+        const aName = document.getElementById('accountName').value.trim();
+
+        if (!bName) errors.push({ icon: '🏦', text: 'เลือกธนาคาร' });
+        else if (bName === 'other' && !oName) errors.push({ icon: '✏️', text: 'ระบุชื่อธนาคารอื่น ๆ' });
+        if (!aName) errors.push({ icon: '👤', text: 'กรอกชื่อบัญชี' });
+
+        paymentInfo = { type, label: bName === 'other' ? oName : bName, number: acctNo, name: aName };
+      } else if (type === 'promptpay') {
+        const pName = document.getElementById('promptpayName').value.trim();
+        if (!pName) errors.push({ icon: '👤', text: 'กรอกชื่อเจ้าของพร้อมเพย์' });
+        
+        paymentInfo = { type, label: 'พร้อมเพย์', number: acctNo, name: pName };
       }
     }
-    return errors;
-  },
 
-  getPaymentInfo() {
-    const type = document.getElementById('bankType').value;
-    const acctNo = document.getElementById('accountNumber').value.trim();
-    if (!type || !acctNo) return null;
-    return type === 'promptpay' 
-      ? { type, label: 'พร้อมเพย์', number: acctNo, name: document.getElementById('promptpayName').value.trim() }
-      : { type, label: document.getElementById('bankName').value === 'other' ? document.getElementById('bankOtherName').value.trim() : document.getElementById('bankName').value, number: acctNo, name: document.getElementById('accountName').value.trim() };
+    return { errors, totals, breakdown, grandTotal, paymentInfo };
   },
 
   shareText() {
-    const errs = this.getValidationErrors();
-    if (errs.length) { UI.showDialog(errs); return; }
-
-    const { totals, breakdown } = AppState.calcSummary();
-    const pay = this.getPaymentInfo();
-    let lines = ['💸 สรุปหารตัง', ''];
-
-    AppState.friends.forEach(f => {
-      lines.push(`👤 ${f}  →  ฿${totals[f].toFixed(2)}`);
-      breakdown[f].forEach(b => lines.push(`    • ${b.name} ÷${b.total}คน = ฿${b.share.toFixed(2)}`));
-    });
+    const { errors, totals, grandTotal, paymentInfo } = this.getValidationAndPayment();
+    if (errors.length) { UI.showDialog(errors); return; }
     
-    lines.push('', `รวมทั้งหมด: ฿${Object.values(totals).reduce((a, b) => a + b, 0).toFixed(2)}`, '');
-    if (pay) {
+    let lines = ['💸 สรุปยอดหารตัง', ''];
+    AppState.friends.forEach(f => lines.push(`👤 ${f}  →  ฿${totals[f].toFixed(2)}`));
+    lines.push('', `รวมทั้งหมด: ฿${grandTotal.toFixed(2)}`, '');
+    
+    if (paymentInfo) {
       lines.push('── ช่องทางรับโอน ──');
-      lines.push(pay.type === 'promptpay' ? `📲 พร้อมเพย์: ${pay.number}` : `🏦 ${pay.label}\nเลขบัญชี: ${pay.number}`);
-      if (pay.name) lines.push(`ชื่อบัญชี: ${pay.name}`);
+      lines.push(paymentInfo.type === 'promptpay' ? `📲 พร้อมเพย์: ${paymentInfo.number}` : `🏦 ${paymentInfo.label}\nเลขบัญชี: ${paymentInfo.number}`);
+      if (paymentInfo.name) lines.push(`ชื่อบัญชี: ${paymentInfo.name}`);
     }
 
     const text = lines.join('\n');
@@ -818,12 +847,8 @@ const Actions = {
   },
 
   saveImage() {
-    const errs = this.getValidationErrors();
-    if (errs.length) { UI.showDialog(errs); return; }
-
-    const { totals, breakdown } = AppState.calcSummary();
-    const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-    const pay = this.getPaymentInfo();
+    const { errors, totals, breakdown, grandTotal, paymentInfo } = this.getValidationAndPayment();
+    if (errors.length) { UI.showDialog(errors); return; }
 
     const baseWidth = 480;
     const lineH = 38;
@@ -833,7 +858,7 @@ const Actions = {
     const personH = AppState.friends.length * (lineH + 2);
     const itemRows = Object.values(breakdown).reduce((s, bd) => s + bd.length, 0);
     const breakH = itemRows * 28 + AppState.friends.length * 22;
-    const payH = pay ? (pay.name ? 96 : 74) : 0;
+    const payH = paymentInfo ? (paymentInfo.name ? 96 : 74) : 0;
     const footerH = 80;
     const baseHeight = headerH + personH + breakH + payH + footerH + (padding * 2) + 40;
 
@@ -844,13 +869,14 @@ const Actions = {
 
     const ctx = canvas.getContext('2d', { alpha: false });
     ctx.scale(dpr, dpr);
-    
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
+    // วาดพื้นหลังหลัก
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, baseWidth, baseHeight);
 
+    // ส่วนหัวสลิป
     const grad = ctx.createLinearGradient(0, 0, baseWidth, 0);
     grad.addColorStop(0, '#1a2e1c'); grad.addColorStop(1, '#0d1a2a');
     ctx.fillStyle = grad;
@@ -878,6 +904,7 @@ const Actions = {
     ctx.fillStyle = '#1e2a3a'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 16;
 
+    // ตารางแจกแจงชื่อรายบุคคล
     AppState.friends.forEach((f, i) => {
       ctx.fillStyle = i % 2 === 0 ? '#121822' : '#0d1117';
       ctx.fillRect(padding - 8, y - 20, baseWidth - padding * 2 + 16, lineH);
@@ -894,6 +921,7 @@ const Actions = {
     ctx.fillStyle = '#1e2a3a'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 20;
 
+    // รายการเมนูย่อยของแต่ละบุคคล
     AppState.friends.forEach(f => {
       const bd = breakdown[f];
       if (bd.length === 0) return;
@@ -912,6 +940,7 @@ const Actions = {
       y += 6;
     });
 
+    // สรุปยอดสุทธิ
     y += 10;
     const gradT = ctx.createLinearGradient(0, y - 10, baseWidth, y + 50);
     gradT.addColorStop(0, '#1a2211'); gradT.addColorStop(1, '#0c160c');
@@ -925,38 +954,70 @@ const Actions = {
     ctx.textAlign = 'right'; ctx.fillText('฿' + grandTotal.toFixed(2), baseWidth - padding, y + 20);
     y += 70;
 
-    if (pay) {
+    // ส่วนข้อมูลรับโอนเงิน
+    if (paymentInfo) {
       ctx.font = 'bold 13px Kanit, sans-serif'; ctx.fillStyle = '#51627a';
       ctx.textAlign = 'left'; ctx.fillText('── ช่องทางการชำระเงินโอน ──', padding, y);
       y += 24;
 
       ctx.font = '600 15px Kanit, sans-serif'; ctx.fillStyle = '#e8edf5';
-      if (pay.type === 'promptpay') {
-        ctx.fillText(`📲 ${pay.label} : ${pay.number}`, padding, y);
+      if (paymentInfo.type === 'promptpay') {
+        ctx.fillText(`📲 ${paymentInfo.label} : ${paymentInfo.number}`, padding, y);
       } else {
-        ctx.fillText(`🏦 ${pay.label}`, padding, y); y += 22;
+        ctx.fillText(`🏦 ${paymentInfo.label}`, padding, y); y += 22;
         ctx.font = '600 15px "IBM Plex Mono", monospace';
-        ctx.fillText(`เลขที่บัญชี: ${pay.number}`, padding + 28, y);
+        ctx.fillText(`เลขที่บัญชี: ${paymentInfo.number}`, padding + 28, y);
       }
-      if (pay.name) {
+      if (paymentInfo.name) {
         y += 22; ctx.fillStyle = '#a0aec0'; ctx.font = '400 14px Kanit, sans-serif';
-        ctx.fillText(`ชื่อบัญชี: ${pay.name}`, padding + 28, y);
+        ctx.fillText(`ชื่อบัญชี: ${paymentInfo.name}`, padding + 28, y);
       }
       y += 30;
     }
 
+    // ท้ายกระดาษ
     ctx.fillStyle = '#1e2330'; ctx.fillRect(padding, y, baseWidth - padding * 2, 1);
     y += 26;
     ctx.font = '300 13px Kanit, sans-serif'; ctx.fillStyle = '#4f5e75';
     ctx.textAlign = 'center'; ctx.fillText('ขอบคุณที่ใช้บริการสรุปยอดสารตัง 💸', baseWidth / 2, y);
 
+    // ดำเนินการสร้างไฟล์รูปภาพหลังวาดเสร็จ
     setTimeout(() => {
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-      const link = document.createElement('a');
-      link.download = `BillSummary-${new Date().toISOString().slice(0,10)}.jpg`;
-      link.href = dataUrl;
-      link.click();
-      this.showToast('🖼 บันทึกรูปลงอุปกรณ์เรียบร้อยแล้ว');
+      const filename = `BillSummary-${new Date().toISOString().slice(0,10)}.jpg`;
+
+      if (UI.isInAppBrowser()) {
+        UI.showPreview(dataUrl);
+        return;
+      }
+
+      try {
+        const parts = dataUrl.split(';base64,');
+        const byteCharacters = atob(parts[1]);
+        const byteNumbers = new Array(byteCharacters.length).fill(0).map((_, i) => byteCharacters.charCodeAt(i));
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 100);
+
+        UI.showToast('🖼 บันทึกรูปลงอุปกรณ์เรียบร้อยแล้ว');
+      } catch (e) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        link.click();
+        UI.showToast('🖼 บันทึกรูปลงอุปกรณ์เรียบร้อยแล้ว');
+      }
     }, 100);
   }
 };
@@ -965,6 +1026,7 @@ const Actions = {
 document.addEventListener('DOMContentLoaded', () => {
   const fInput = document.getElementById('friendInput');
   const fBtn = document.getElementById('addFriendBtn');
+  
   fInput.addEventListener('input', () => {
     fInput.value = fInput.value.replace(/[^ก-๙a-zA-Z\s]/g, '');
     fBtn.disabled = fInput.value.trim() === '';
@@ -973,7 +1035,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const iInput = document.getElementById('itemInput');
   iInput.addEventListener('input', function() {
-    // ปรับปรุง Regex ขัดเกลาข้อมูลขาเข้าให้พิมพ์ชื่อไทย/อังกฤษ ตัวเลข จุด และสเปซได้ปกติ
     this.value = this.value.replace(/[^ก-๙a-zA-Z0-9\s\.\-]/g, '');
   });
   iInput.addEventListener('keydown', e => { if (e.key === 'Enter') AppState.addItem(); });
