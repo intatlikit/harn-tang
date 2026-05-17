@@ -431,9 +431,46 @@
     <div class="card-title"><span>📊</span> สรุปยอด</div>
     <table class="summary-table" id="summaryTable"></table>
     <div class="divider"></div>
+
+    <!-- PAYMENT INFO -->
+    <div class="card-title" style="margin-bottom:12px"><span>🏦</span> ข้อมูลรับโอน <span style="color:var(--text3);font-size:0.7rem;font-weight:400;text-transform:none;letter-spacing:0">(ไม่บังคับ)</span></div>
+    <div class="input-row" style="margin-bottom:10px">
+      <select id="bankType" class="input-field" onchange="onBankTypeChange()">
+        <option value="">— เลือกช่องทาง —</option>
+        <option value="promptpay">📲 พร้อมเพย์</option>
+        <option value="bank">🏦 ธนาคาร</option>
+      </select>
+    </div>
+    <div id="bankFields" style="display:none;flex-direction:column;gap:10px">
+      <div id="bankNameRow" class="input-row" style="display:none">
+        <select id="bankName" class="input-field">
+          <option value="">— เลือกธนาคาร —</option>
+          <option>กสิกรไทย (KBANK)</option>
+          <option>กรุงไทย (KTB)</option>
+          <option>ไทยพาณิชย์ (SCB)</option>
+          <option>กรุงเทพ (BBL)</option>
+          <option>กรุงศรี (BAY)</option>
+          <option>ทหารไทยธนชาต (TTB)</option>
+          <option>ออมสิน (GSB)</option>
+          <option>ธ.ก.ส. (BAAC)</option>
+          <option>ซีไอเอ็มบี (CIMB)</option>
+          <option>ยูโอบี (UOB)</option>
+          <option>แลนด์แอนด์เฮ้าส์ (LHB)</option>
+          <option>อื่นๆ</option>
+        </select>
+      </div>
+      <div class="input-row">
+        <input id="accountNumber" class="input-field" type="text" placeholder="หมายเลขบัญชี / เบอร์พร้อมเพย์" maxlength="14" autocomplete="off" inputmode="numeric">
+      </div>
+      <div id="accountNameRow" class="input-row" style="display:none">
+        <input id="accountName" class="input-field" type="text" placeholder="ชื่อบัญชี" maxlength="50" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="divider"></div>
     <div class="action-row">
       <button class="btn btn-accent2" onclick="shareText()">📤 แชร์ข้อความ</button>
-      <button class="btn btn-amber" onclick="saveImage()">💾 บันทึกสลิป</button>
+      <button class="btn btn-amber" onclick="saveImage()">🖼 บันทึกสลิป</button>
     </div>
   </div>
 
@@ -658,19 +695,74 @@ function toggleBreakdown(name) {
   renderSummary();
 }
 
+// ─── BANK TYPE TOGGLE ───
+function onBankTypeChange() {
+  const type = document.getElementById('bankType').value;
+  const fields = document.getElementById('bankFields');
+  const bankNameRow = document.getElementById('bankNameRow');
+  const accountNameRow = document.getElementById('accountNameRow');
+  if (!type) { fields.style.display = 'none'; return; }
+  fields.style.display = 'flex';
+  if (type === 'promptpay') {
+    bankNameRow.style.display = 'none';
+    accountNameRow.style.display = 'none';
+    document.getElementById('accountNumber').placeholder = 'เบอร์โทร / เลขบัตรประชาชน';
+  } else {
+    bankNameRow.style.display = 'flex';
+    accountNameRow.style.display = 'flex';
+    document.getElementById('accountNumber').placeholder = 'หมายเลขบัญชี (ไม่เกิน 14 หลัก)';
+  }
+}
+
+document.getElementById('accountNumber').addEventListener('input', function() {
+  this.value = this.value.replace(/\D/g, '').slice(0, 14);
+});
+
+function getPaymentInfo() {
+  const type = document.getElementById('bankType').value;
+  if (!type) return null;
+  const acctNo = document.getElementById('accountNumber').value.trim();
+  if (!acctNo) return null;
+  if (type === 'promptpay') {
+    return { type: 'promptpay', label: 'พร้อมเพย์', number: acctNo, name: '' };
+  } else {
+    const bank = document.getElementById('bankName').value;
+    const name = document.getElementById('accountName').value.trim();
+    return { type: 'bank', label: bank || 'ธนาคาร', number: acctNo, name };
+  }
+}
+
 // ─── SHARE TEXT ───
 function shareText() {
-  const { totals } = calcSummary();
+  const { totals, breakdown } = calcSummary();
   const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-  let text = '💸 สรุปหารตัง\n';
-  text += '─'.repeat(24) + '\n';
-  friends.forEach(f => {
-    text += `${f.padEnd(12)} ฿${totals[f].toFixed(2)}\n`;
-  });
-  text += '─'.repeat(24) + '\n';
-  text += `รวมทั้งหมด ฿${grandTotal.toFixed(2)}\n`;
-  text += '\n📲 หารตัง App';
+  const pay = getPaymentInfo();
 
+  let lines = [];
+  lines.push('💸 สรุปหารตัง');
+  lines.push('');
+  friends.forEach(f => {
+    lines.push('👤 ' + f + '  →  ฿' + totals[f].toFixed(2));
+    breakdown[f].forEach(b => {
+      lines.push('   • ' + b.name + ' ÷' + b.total + 'คน = ฿' + b.share.toFixed(2));
+    });
+  });
+  lines.push('');
+  lines.push('รวม  ฿' + grandTotal.toFixed(2));
+
+  if (pay) {
+    lines.push('');
+    lines.push('── โอนมาที่ ──');
+    if (pay.type === 'promptpay') {
+      lines.push('📲 พร้อมเพย์  ' + pay.number);
+    } else {
+      lines.push('🏦 ' + pay.label);
+      lines.push('   เลขบัญชี  ' + pay.number);
+      if (pay.name) lines.push('   ชื่อบัญชี  ' + pay.name);
+    }
+  }
+
+  const text = lines.join('\n');
   if (navigator.share) {
     navigator.share({ text });
   } else {
@@ -682,6 +774,7 @@ function shareText() {
 function saveImage() {
   const { totals, breakdown } = calcSummary();
   const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+  const pay = getPaymentInfo();
 
   const W = 480;
   const lineH = 36;
@@ -690,8 +783,9 @@ function saveImage() {
   const personH = friends.length * (lineH + 2);
   const itemRows = Object.values(breakdown).reduce((s, bd) => s + bd.length, 0);
   const breakH = itemRows * 28 + friends.length * 20;
-  const footH = 80;
-  const totalH = headerH + personH + 20 + breakH + footH + padding * 2 + 40;
+  const payH = pay ? (pay.type === 'promptpay' ? 70 : 100) : 0;
+  const footH = 60;
+  const totalH = headerH + personH + 20 + breakH + 20 + payH + footH + padding * 2 + 40;
 
   const canvas = document.getElementById('slipCanvas');
   canvas.width = W;
@@ -708,12 +802,9 @@ function saveImage() {
   grad.addColorStop(1, '#0d1a2a');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, headerH);
-
-  // Header border
   ctx.fillStyle = '#4ade80';
   ctx.fillRect(0, headerH - 2, W, 2);
 
-  // Logo & title
   ctx.font = '32px Kanit';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#4ade80';
@@ -728,7 +819,6 @@ function saveImage() {
   ctx.fillStyle = '#22d3ee';
   ctx.fillText('สรุปยอดค่าใช้จ่าย', W/2, 105);
 
-  // ─── Person rows ───
   let y = headerH + 24;
 
   ctx.font = 'bold 13px Kanit';
@@ -746,17 +836,14 @@ function saveImage() {
     const bg = i % 2 === 0 ? '#111820' : '#0d1117';
     ctx.fillStyle = bg;
     ctx.fillRect(padding - 8, y - 22, W - padding*2 + 16, lineH);
-
     ctx.font = '600 15px Kanit';
     ctx.fillStyle = '#e8edf5';
     ctx.textAlign = 'left';
     ctx.fillText(f, padding, y);
-
     ctx.font = '600 15px IBM Plex Mono, monospace';
     ctx.fillStyle = '#4ade80';
     ctx.textAlign = 'right';
     ctx.fillText('฿' + totals[f].toFixed(2), W - padding, y);
-
     y += lineH + 2;
   });
 
@@ -765,22 +852,19 @@ function saveImage() {
   ctx.fillRect(padding, y, W - padding*2, 1);
   y += 16;
 
-  // ─── Breakdown by person ───
   friends.forEach(f => {
     const bd = breakdown[f];
     if (bd.length === 0) return;
-
     ctx.font = '600 13px Kanit';
     ctx.fillStyle = '#22d3ee';
     ctx.textAlign = 'left';
-    ctx.fillText(`📌 ${f}`, padding, y);
+    ctx.fillText('📌 ' + f, padding, y);
     y += 20;
-
     bd.forEach(b => {
       ctx.font = '400 12px Kanit';
       ctx.fillStyle = '#a0aec0';
       ctx.textAlign = 'left';
-      ctx.fillText(`  ${b.name} (÷${b.total}คน)`, padding + 10, y);
+      ctx.fillText('  ' + b.name + ' (÷' + b.total + 'คน)', padding + 10, y);
       ctx.font = '500 12px IBM Plex Mono, monospace';
       ctx.fillStyle = '#7dd3fc';
       ctx.textAlign = 'right';
@@ -790,36 +874,104 @@ function saveImage() {
     y += 4;
   });
 
-  // ─── Grand total ───
+  // Grand total bar
   y += 10;
   const gradT = ctx.createLinearGradient(0, y - 10, W, y + 50);
   gradT.addColorStop(0, '#1a1f0a');
   gradT.addColorStop(1, '#0d1a0a');
   ctx.fillStyle = gradT;
   ctx.fillRect(0, y - 10, W, 60);
-
   ctx.fillStyle = '#f59e0b';
   ctx.fillRect(0, y - 10, W, 2);
-
   ctx.font = 'bold 14px Kanit';
   ctx.fillStyle = '#a0aec0';
   ctx.textAlign = 'left';
   ctx.fillText('รวมทั้งหมด', padding, y + 22);
-
   ctx.font = 'bold 22px IBM Plex Mono, monospace';
   ctx.fillStyle = '#f59e0b';
   ctx.textAlign = 'right';
   ctx.fillText('฿' + grandTotal.toFixed(2), W - padding, y + 24);
-
   y += 60;
 
+  // Payment info block
+  if (pay) {
+    y += 12;
+    ctx.fillStyle = '#111c2a';
+    ctx.beginPath();
+    const r = 10, bx = padding - 8, bw = W - padding*2 + 16;
+    const bh = pay.type === 'promptpay' ? 58 : 88;
+    ctx.moveTo(bx + r, y); ctx.lineTo(bx + bw - r, y);
+    ctx.arcTo(bx + bw, y, bx + bw, y + r, r);
+    ctx.lineTo(bx + bw, y + bh - r);
+    ctx.arcTo(bx + bw, y + bh, bx + bw - r, y + bh, r);
+    ctx.lineTo(bx + r, y + bh);
+    ctx.arcTo(bx, y + bh, bx, y + bh - r, r);
+    ctx.lineTo(bx, y + r);
+    ctx.arcTo(bx, y, bx + r, y, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#22d3ee33';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.font = '600 11px Kanit';
+    ctx.fillStyle = '#22d3ee';
+    ctx.textAlign = 'left';
+    ctx.fillText('โอนมาที่', padding, y + 18);
+
+    if (pay.type === 'promptpay') {
+      ctx.font = '500 13px Kanit';
+      ctx.fillStyle = '#e8edf5';
+      ctx.fillText('📲 พร้อมเพย์', padding, y + 40);
+      ctx.font = '600 13px IBM Plex Mono, monospace';
+      ctx.fillStyle = '#4ade80';
+      ctx.textAlign = 'right';
+      ctx.fillText(pay.number, W - padding, y + 40);
+    } else {
+      ctx.font = '500 13px Kanit';
+      ctx.fillStyle = '#e8edf5';
+      ctx.fillText('🏦 ' + pay.label, padding, y + 38);
+      ctx.font = '400 12px Kanit';
+      ctx.fillStyle = '#a0aec0';
+      ctx.fillText('เลขบัญชี', padding, y + 62);
+      ctx.font = '600 13px IBM Plex Mono, monospace';
+      ctx.fillStyle = '#4ade80';
+      ctx.textAlign = 'right';
+      ctx.fillText(pay.number, W - padding, y + 62);
+      if (pay.name) {
+        ctx.font = '400 12px Kanit';
+        ctx.fillStyle = '#a0aec0';
+        ctx.textAlign = 'left';
+        ctx.fillText('ชื่อบัญชี  ' + pay.name, padding, y + 82);
+      }
+    }
+    y += pay.type === 'promptpay' ? 70 : 100;
+  }
+
   // Footer
+  y += 16;
   ctx.font = '400 11px Kanit';
   ctx.fillStyle = '#2d3548';
   ctx.textAlign = 'center';
-  ctx.fillText('สร้างด้วย หารตัง App 💸', W / 2, y + 20);
+  ctx.fillText('สร้างด้วย หารตัง App 💸', W / 2, y);
 
-  // Download
+  // Share / save
+  canvas.toBlob(async (blob) => {
+    const file = new File([blob], 'หารตัง-สรุป.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'หารตัง สรุปยอด' });
+        showToast('✅ แชร์สลิปแล้ว');
+      } catch (err) {
+        if (err.name !== 'AbortError') fallbackDownload(canvas);
+      }
+    } else {
+      fallbackDownload(canvas);
+    }
+  }, 'image/png');
+}
+
+function fallbackDownload(canvas) {
   const link = document.createElement('a');
   link.download = 'หารตัง-สรุป.png';
   link.href = canvas.toDataURL('image/png');
