@@ -750,81 +750,159 @@ const Actions = {
     const { errors, totals, breakdown, grandTotal, paymentInfo } = this.getValidationAndPayment();
     if (errors.length) { UI.showDialog(errors); return; }
 
-    const baseWidth = 480;
-    const lineH = 40;
-    const padding = 32;
-    const headerH = 140;
-    const personH = AppState.friends.length * lineH;
-    const breakdownH = Object.values(breakdown).reduce((s, bd) => s + bd.length * 28 + 25, 0);
-    const payH = paymentInfo ? 100 : 0;
-    const baseHeight = headerH + personH + breakdownH + payH + 120;
+    // ─── ขนาด canvas (logical px) ───
+    const W = 400;           // ความกว้างรูป
+    const PAD = 28;          // padding ซ้าย-ขวา
+    const COL_LEFT = PAD;    // เริ่มคอลัมน์ซ้าย
+    const COL_RIGHT = W - PAD; // จบคอลัมน์ขวา (right-align)
+    const CONTENT_W = W - PAD * 2; // ความกว้างพื้นที่เนื้อหา
 
-    const dpr = 3; 
+    // helper: ตัด text ถ้ายาวเกิน maxW
+    const fitText = (ctx, text, maxW) => {
+      if (ctx.measureText(text).width <= maxW) return text;
+      let t = text;
+      while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+      return t + '…';
+    };
+
+    // helper: วาด row 2 คอลัมน์ (ชื่อ + จำนวน) โดยให้ราคาไม่ล้นขอบ
+    const drawRow = (ctx, leftText, rightText, y, lColor, rColor, font, rightFont) => {
+      // วัดความกว้างราคาก่อน แล้วจำกัดชื่อให้เหลือพื้นที่
+      ctx.font = rightFont || font;
+      const rW = ctx.measureText(rightText).width;
+      const gap = 12;
+      const maxLeftW = CONTENT_W - rW - gap;
+
+      ctx.font = font;
+      const safeLeft = fitText(ctx, leftText, maxLeftW);
+
+      ctx.textAlign = 'left';  ctx.fillStyle = lColor; ctx.font = font;
+      ctx.fillText(safeLeft, COL_LEFT, y);
+      ctx.textAlign = 'right'; ctx.fillStyle = rColor; ctx.font = rightFont || font;
+      ctx.fillText(rightText, COL_RIGHT, y);
+    };
+
+    // ─── คำนวณความสูง ───
+    const LINE_H  = 38;
+    const BD_H    = 26;
+    const HEADER_H = 120;
+    const personH   = AppState.friends.length * LINE_H;
+    const breakdownH = Object.values(breakdown).reduce((s, bd) => s + (bd.length > 0 ? bd.length * BD_H + 32 : 0), 0);
+    const payH      = paymentInfo ? 80 : 0;
+    const baseHeight = HEADER_H + personH + 30 + breakdownH + 70 + payH + 40;
+
+    // ─── สร้าง canvas ───
+    const DPR = 3;
     const canvas = document.getElementById('slipCanvas');
-    canvas.width = baseWidth * dpr; canvas.height = baseHeight * dpr;
+    canvas.width  = W * DPR;
+    canvas.height = baseHeight * DPR;
     const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
+    ctx.scale(DPR, DPR);
 
-    // Background
-    ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, baseWidth, baseHeight);
-    
-    // Header
-    const grad = ctx.createLinearGradient(0, 0, baseWidth, 0);
+    // ── พื้นหลัง ──
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, W, baseHeight);
+
+    // ── Header bar ──
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
     grad.addColorStop(0, '#1a2e1c'); grad.addColorStop(1, '#0d1a2a');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, baseWidth, headerH);
-    ctx.fillStyle = '#4ade80'; ctx.fillRect(0, headerH-2, baseWidth, 2);
-    ctx.textAlign = 'center'; ctx.fillStyle = '#4ade80';
-    ctx.font = 'bold 32px Kanit'; ctx.fillText('💸 หารตัง', baseWidth/2, 60);
-    ctx.font = '14px Kanit'; ctx.fillStyle = '#64748b'; ctx.fillText(new Date().toLocaleString('th-TH'), baseWidth/2, 95);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, HEADER_H);
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, HEADER_H - 2, W, 2);
 
-    let y = headerH + 40;
-    // Totals (ภาพสลิป - ยอดสรุปรายคน)
+    // ชื่อแอป (ไม่ใช้ emoji ใน canvas — ใช้ตัวอักษรแทน)
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold 28px Kanit';
+    ctx.fillText('หารตัง', W / 2, 52);
+    ctx.font = '500 13px Kanit';
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillText('สรุปยอดค่าใช้จ่าย', W / 2, 76);
+    ctx.font = '12px Kanit';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(new Date().toLocaleString('th-TH'), W / 2, 100);
+
+    let y = HEADER_H + 32;
+
+    // ── ส่วน: ยอดรายคน ──
     AppState.friends.forEach((f, i) => {
-      ctx.fillStyle = i % 2 === 0 ? '#161a22' : '#0d1117';
-      ctx.fillRect(padding-10, y-25, baseWidth-padding*2+20, lineH);
-      ctx.textAlign = 'left'; ctx.fillStyle = '#e8edf5'; ctx.font = '600 16px Kanit';
-      ctx.fillText(f, padding, y);
-      ctx.textAlign = 'right'; ctx.fillStyle = '#4ade80';
-      ctx.fillText(UI.formatCurrencyText(totals[f]), baseWidth-padding, y);
-      y += lineH;
+      // แถบสลับสี
+      ctx.fillStyle = i % 2 === 0 ? '#161a22' : '#111418';
+      ctx.fillRect(0, y - 24, W, LINE_H);
+
+      drawRow(ctx,
+        f,
+        UI.formatCurrencyText(totals[f]),
+        y,
+        '#e8edf5', '#4ade80',
+        '600 15px Kanit', 'bold 15px Kanit'
+      );
+      y += LINE_H;
     });
 
-    y += 20; ctx.strokeStyle = '#2d3548'; ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(baseWidth-padding, y); ctx.stroke();
-    y += 30;
+    // เส้นคั่น
+    y += 14;
+    ctx.strokeStyle = '#2d3548'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+    y += 22;
 
-    // Breakdown (ภาพสลิป - รายละเอียดเมนูย่อย)
+    // ── ส่วน: รายละเอียด breakdown ──
     AppState.friends.forEach(f => {
-      const bd = breakdown[f]; if (bd.length === 0) return;
-      ctx.textAlign = 'left'; ctx.fillStyle = '#22d3ee'; ctx.font = 'bold 14px Kanit';
-      ctx.fillText('📌 ' + f, padding, y); y += 25;
+      const bd = breakdown[f];
+      if (bd.length === 0) return;
+
+      // หัวชื่อคน
+      ctx.textAlign = 'left'; ctx.fillStyle = '#22d3ee'; ctx.font = 'bold 13px Kanit';
+      ctx.fillText(f, COL_LEFT, y);
+      y += 22;
+
       bd.forEach(b => {
-        ctx.fillStyle = '#a0aec0'; ctx.font = '13px Kanit';
-        ctx.textAlign = 'left'; ctx.fillText(`  • ${b.name} (÷${b.total})`, padding+10, y);
-        ctx.textAlign = 'right'; ctx.fillText(UI.formatCurrencyText(b.share), baseWidth-padding, y);
-        y += 26;
+        const label = `• ${b.name} (÷${b.total}คน)`;
+        drawRow(ctx,
+          label,
+          UI.formatCurrencyText(b.share),
+          y,
+          '#94a3b8', '#a0aec0',
+          '12px Kanit', '12px Kanit'
+        );
+        y += BD_H;
       });
       y += 10;
     });
 
-    // Grand Total (ภาพสลิป - ยอดรวมทั้งหมด)
-    y += 10; ctx.fillStyle = '#1a2211'; ctx.fillRect(0, y, baseWidth, 60);
-    ctx.fillStyle = '#f59e0b'; ctx.fillRect(0, y, baseWidth, 2);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#a0aec0'; ctx.font = 'bold 15px Kanit';
-    ctx.fillText('ยอดรวมทั้งสิ้น', padding, y + 35);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 22px Kanit';
-    ctx.fillText(UI.formatCurrencyText(grandTotal), baseWidth-padding, y + 35);
-    y += 85;
+    // ── Grand Total ──
+    y += 8;
+    ctx.fillStyle = '#151e10';
+    ctx.fillRect(0, y - 4, W, 52);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(0, y - 4, W, 2);
 
-    // Payment
+    drawRow(ctx,
+      'ยอดรวมทั้งสิ้น',
+      UI.formatCurrencyText(grandTotal),
+      y + 30,
+      '#a0aec0', '#f59e0b',
+      'bold 14px Kanit', 'bold 20px Kanit'
+    );
+    y += 72;
+
+    // ── ข้อมูลรับโอน ──
     if (paymentInfo) {
-      ctx.textAlign = 'left'; ctx.fillStyle = '#e8edf5'; ctx.font = '600 15px Kanit';
-      ctx.fillText(`📲 ${paymentInfo.label}: ${paymentInfo.number}`, padding, y);
-      ctx.font = '14px Kanit'; ctx.fillStyle = '#a0aec0';
-      ctx.fillText(`ชื่อบัญชี: ${paymentInfo.name}`, padding, y + 25);
+      ctx.fillStyle = '#13181f';
+      ctx.fillRect(0, y - 8, W, 74);
+      ctx.fillStyle = '#2d3548';
+      ctx.fillRect(PAD, y - 8, W - PAD * 2, 1);
+
+      ctx.textAlign = 'left'; ctx.fillStyle = '#e8edf5'; ctx.font = '600 14px Kanit';
+      const payLabel = `${paymentInfo.label}: ${paymentInfo.number}`;
+      ctx.fillText(fitText(ctx, payLabel, CONTENT_W), COL_LEFT, y + 14);
+      ctx.font = '13px Kanit'; ctx.fillStyle = '#a0aec0';
+      ctx.fillText(fitText(ctx, `ชื่อบัญชี: ${paymentInfo.name}`, CONTENT_W), COL_LEFT, y + 36);
     }
 
-    // Process Download/Share
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    // ── บันทึก / แชร์ ──
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     if (UI.isInAppBrowser()) { UI.showPreview(dataUrl); return; }
 
     try {
@@ -835,7 +913,7 @@ const Actions = {
         } else {
           const link = document.createElement('a'); link.download = 'bill.jpg'; link.href = dataUrl; link.click();
         }
-      }, 'image/jpeg', 0.9);
+      }, 'image/jpeg', 0.92);
     } catch { UI.showPreview(dataUrl); }
   }
 };
