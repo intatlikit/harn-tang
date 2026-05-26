@@ -787,9 +787,16 @@ const Actions = {
     const BD_H    = 26;
     const HEADER_H = 120;
     const personH   = AppState.friends.length * LINE_H;
-    const breakdownH = Object.values(breakdown).reduce((s, bd) => s + (bd.length > 0 ? bd.length * BD_H + 32 : 0), 0);
+    const breakdownH = Object.values(breakdown).reduce((s, bd) => s + (bd.length > 0 ? bd.length * (BD_H + 8) + 32 : 0), 0);
     const payH      = paymentInfo ? 80 : 0;
     const baseHeight = HEADER_H + personH + 30 + breakdownH + 70 + payH + 40;
+
+    // ─── รอ font โหลดก่อน (สำคัญมากสำหรับมือถือ) ───
+    try {
+      await document.fonts.load('bold 28px Kanit');
+      await document.fonts.load('600 15px Kanit');
+      await document.fonts.load('13px Kanit');
+    } catch(e) {}
 
     // ─── สร้าง canvas ───
     const DPR = 3;
@@ -858,15 +865,14 @@ const Actions = {
       y += 22;
 
       bd.forEach(b => {
-        const label = `• ${b.name} (÷${b.total}คน)`;
-        drawRow(ctx,
-          label,
-          UI.formatCurrencyText(b.share),
-          y,
-          '#94a3b8', '#a0aec0',
-          '12px Kanit', '12px Kanit'
-        );
-        y += BD_H;
+        // บรรทัด 1: ชื่อรายการ
+        const label = `  • ${b.name} (÷${b.total}คน)`;
+        ctx.textAlign = 'left'; ctx.fillStyle = '#94a3b8'; ctx.font = '12px Kanit';
+        ctx.fillText(fitText(ctx, label, CONTENT_W), COL_LEFT, y);
+        // บรรทัด 2: ราคา (indent ขวา)
+        ctx.textAlign = 'right'; ctx.fillStyle = '#a0aec0'; ctx.font = '600 12px Kanit';
+        ctx.fillText(UI.formatCurrencyText(b.share), COL_RIGHT, y + 16);
+        y += BD_H + 8;
       });
       y += 10;
     });
