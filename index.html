@@ -776,20 +776,22 @@ const Actions = {
     const BD_LINE  = 22;
     const HEADER_H = 118;
 
-    // ── font ที่ใช้ใน canvas (มี fallback เสมอ) ──
+    // ── ตรวจว่า Kanit โหลดได้จริง ถ้าไม่ได้ fallback เป็น Arial ──
+    const hasKanit = [...document.fonts].some(f => f.family === 'Kanit' && f.status === 'loaded');
+    const FF = hasKanit ? 'Kanit' : 'Arial, sans-serif';
     const F = {
-      title:  'bold 26px Kanit, Arial, sans-serif',
-      sub:    '500 13px Kanit, Arial, sans-serif',
-      date:   '12px Kanit, Arial, sans-serif',
-      name:   '600 15px Kanit, Arial, sans-serif',
-      price:  'bold 15px Kanit, Arial, sans-serif',
-      bdHead: 'bold 13px Kanit, Arial, sans-serif',
-      bdItem: '12px Kanit, Arial, sans-serif',
-      bdPrice:'600 12px Kanit, Arial, sans-serif',
-      totL:   'bold 14px Kanit, Arial, sans-serif',
-      totR:   'bold 20px Kanit, Arial, sans-serif',
-      payL:   '600 14px Kanit, Arial, sans-serif',
-      payS:   '13px Kanit, Arial, sans-serif',
+      title:  `bold 26px ${FF}`,
+      sub:    `500 13px ${FF}`,
+      date:   `12px ${FF}`,
+      name:   `600 15px ${FF}`,
+      price:  `bold 15px ${FF}`,
+      bdHead: `bold 13px ${FF}`,
+      bdItem: `12px ${FF}`,
+      bdPrice:`600 12px ${FF}`,
+      totL:   `bold 14px ${FF}`,
+      totR:   `bold 20px ${FF}`,
+      payL:   `600 14px ${FF}`,
+      payS:   `13px ${FF}`,
     };
 
     // helper: ตัด text ถ้าล้น maxW
@@ -804,12 +806,14 @@ const Actions = {
     // helper: วาด 2 คอลัมน์ — ชื่อซ้าย, ราคาขวา โดยจำกัด maxWidth ชื่อ
     const row2col = (ctx, lFont, rFont, lText, rText, y, lColor, rColor) => {
       ctx.font = rFont;
-      const rW  = ctx.measureText(rText).width;
-      const lMax = CONTENT_W - rW - 10;
+      const rW   = ctx.measureText(rText).width;
+      // lMax = พื้นที่เนื้อหา ลบความกว้างราคา ลบ gap
+      const lMax = CONTENT_W - rW - 14;
       ctx.textAlign = 'left';  ctx.fillStyle = lColor; ctx.font = lFont;
       ctx.fillText(fit(ctx, lFont, lText, lMax), PAD, y);
+      // วาดราคาที่ W-PAD (ขอบขวาจริง)
       ctx.textAlign = 'right'; ctx.fillStyle = rColor; ctx.font = rFont;
-      ctx.fillText(rText, RPAD, y);
+      ctx.fillText(rText, W - PAD, y);
     };
 
     // ── คำนวณความสูง ──
