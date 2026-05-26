@@ -428,10 +428,27 @@
 
   #slipCanvas { display: none; }
 
+  /* ── Responsive ── */
   @media (max-width: 480px) {
-    .header h1 { font-size: 1.7rem; }
-    .btn-accent2, .btn-amber { padding: 12px 16px; font-size: 0.9rem; }
+    .container { padding: 16px 12px 60px; }
+    .header { padding: 20px 0 18px; }
+    .header h1 { font-size: 1.6rem; }
+    .card { padding: 16px 14px; }
+    .btn-accent2, .btn-amber { padding: 11px 14px; font-size: 0.88rem; }
     .action-row { flex-direction: column; }
+    .input-field { font-size: 0.9rem; }
+    .preview-card { padding: 16px 14px; }
+  }
+  @media (max-width: 360px) {
+    .header h1 { font-size: 1.4rem; }
+    .card { padding: 14px 12px; }
+    .btn { font-size: 0.82rem; padding: 9px 12px; }
+    .btn-accent2, .btn-amber { font-size: 0.82rem; padding: 10px 12px; }
+    .summary-table td, .summary-table th { padding: 8px 6px; }
+    .card-title { font-size: 0.7rem; }
+  }
+  @media (min-width: 600px) {
+    .action-row .btn { max-width: 240px; }
   }
 </style>
 </head>
@@ -767,31 +784,34 @@ const Actions = {
     // ── รอ font ให้โหลดเสร็จก่อน (ป้องกัน measureText ผิดบนมือถือ) ──
     try { await document.fonts.ready; } catch(e) {}
 
-    // ── ค่าคงที่ layout ──
-    const W        = 380;
-    const PAD      = 24;
+    // ── ค่าคงที่ layout — ปรับตาม screen จริง ──
+    // จำกัด min 320, max 480 และต้องไม่เกิน viewport
+    const W        = Math.min(480, Math.max(320, window.innerWidth - 32));
+    const PAD      = Math.round(W * 0.072); // ~7.2% ของความกว้าง
     const RPAD     = W - PAD;       // ขอบขวาสำหรับ right-align
     const CONTENT_W = W - PAD * 2;
-    const LINE_H   = 40;
-    const BD_LINE  = 22;
-    const HEADER_H = 118;
+    const LINE_H   = Math.round(40 * W / 420);
+    const BD_LINE  = Math.round(22 * W / 420);
+    const HEADER_H = Math.round(118 * W / 420);
 
-    // ── ตรวจว่า Kanit โหลดได้จริง ถ้าไม่ได้ fallback เป็น Arial ──
+    // ── font — scale ตาม W, fallback ถ้า Kanit ไม่โหลด ──
     const hasKanit = [...document.fonts].some(f => f.family === 'Kanit' && f.status === 'loaded');
     const FF = hasKanit ? 'Kanit' : 'Arial, sans-serif';
+    // scale font size ตามความกว้าง canvas (base = 420px)
+    const fs = (base) => Math.round(base * W / 420);
     const F = {
-      title:  `bold 26px ${FF}`,
-      sub:    `500 13px ${FF}`,
-      date:   `12px ${FF}`,
-      name:   `600 15px ${FF}`,
-      price:  `bold 15px ${FF}`,
-      bdHead: `bold 13px ${FF}`,
-      bdItem: `12px ${FF}`,
-      bdPrice:`600 12px ${FF}`,
-      totL:   `bold 14px ${FF}`,
-      totR:   `bold 20px ${FF}`,
-      payL:   `600 14px ${FF}`,
-      payS:   `13px ${FF}`,
+      title:  `bold ${fs(26)}px ${FF}`,
+      sub:    `500 ${fs(13)}px ${FF}`,
+      date:   `${fs(12)}px ${FF}`,
+      name:   `600 ${fs(15)}px ${FF}`,
+      price:  `bold ${fs(15)}px ${FF}`,
+      bdHead: `bold ${fs(13)}px ${FF}`,
+      bdItem: `${fs(12)}px ${FF}`,
+      bdPrice:`600 ${fs(12)}px ${FF}`,
+      totL:   `bold ${fs(14)}px ${FF}`,
+      totR:   `bold ${fs(20)}px ${FF}`,
+      payL:   `600 ${fs(14)}px ${FF}`,
+      payS:   `${fs(13)}px ${FF}`,
     };
 
     // helper: ตัด text ถ้าล้น maxW
@@ -890,7 +910,11 @@ const Actions = {
     // ── Grand Total ──
     ctx.fillStyle = '#151e10'; ctx.fillRect(0, y, W, 58);
     ctx.fillStyle = '#f59e0b'; ctx.fillRect(0, y, W, 2);
-    row2col(ctx, F.totL, F.totR, 'ยอดรวมทั้งสิ้น', UI.formatCurrencyText(grandTotal), y + 36, '#a0aec0', '#f59e0b');
+    // Grand total ราคาใหญ่ 20px ต้องการพื้นที่มากขึ้น
+    ctx.textAlign = 'left';  ctx.fillStyle = '#a0aec0'; ctx.font = F.totL;
+    ctx.fillText('ยอดรวมทั้งสิ้น', PAD, y + 36);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#f59e0b'; ctx.font = F.totR;
+    ctx.fillText(UI.formatCurrencyText(grandTotal), W - PAD, y + 36);
     y += 68;
 
     // ── ข้อมูลโอนเงิน ──
