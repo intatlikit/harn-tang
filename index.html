@@ -656,7 +656,7 @@
     <!-- HEADER -->
     <div class="header">
       <span class="header-icon">💸</span>
-      <h1>หารตัง v1</h1>
+      <h1>หารตัง v2</h1>
       <p>แชร์ค่าใช้จ่ายกับเพื่อนๆ ง่ายๆ</p>
     </div>
 
@@ -1044,12 +1044,8 @@
 
         // ── คำนวณความสูง ──
         const personH = AppState.friends.length * LINE_H;
-        const breakdownH = Object.values(breakdown).reduce((s, bd) => {
-          if (bd.length === 0) return s;
-          return s + 28 + bd.length * (BD_LINE * 2 + 6) + 10;
-        }, 0);
         const payH = paymentInfo ? 76 : 0;
-        const totalH = HEADER_H + personH + 20 + breakdownH + 68 + payH + 28;
+        const totalH = HEADER_H + personH + 10 + 68 + payH + 24;
 
         // ── สร้าง canvas ──
         const DPR = 3;
@@ -1086,34 +1082,8 @@
           y += LINE_H;
         });
 
-        // ── เส้นคั่น ──
-        y += 10;
-        ctx.strokeStyle = '#2d3548'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(RPAD, y); ctx.stroke();
-        y += 18;
-
-        // ── Breakdown รายละเอียด ──
-        AppState.friends.forEach(f => {
-          const bd = breakdown[f];
-          if (bd.length === 0) return;
-          // ชื่อคน
-          ctx.textAlign = 'left'; ctx.fillStyle = '#22d3ee'; ctx.font = F.bdHead;
-          ctx.fillText(fit(ctx, F.bdHead, f, CONTENT_W), PAD, y);
-          y += 28;
-          bd.forEach(b => {
-            // บรรทัดบน: ชื่อเมนู
-            ctx.textAlign = 'left'; ctx.fillStyle = '#94a3b8'; ctx.font = F.bdItem;
-            ctx.fillText(fit(ctx, F.bdItem, `• ${b.name} (÷${b.total}คน)`, CONTENT_W - 6), PAD + 6, y);
-            y += BD_LINE;
-            // บรรทัดล่าง: ราคา ชิดขวา
-            ctx.textAlign = 'right'; ctx.fillStyle = '#a0aec0'; ctx.font = F.bdPrice;
-            ctx.fillText(UI.formatCurrencyText(b.share), RPAD, y);
-            y += BD_LINE + 6;
-          });
-          y += 10;
-        });
-
         // ── Grand Total ──
+        y += 10;
         ctx.fillStyle = '#151e10'; ctx.fillRect(0, y, W, 58);
         ctx.fillStyle = '#f59e0b'; ctx.fillRect(0, y, W, 2);
         ctx.textAlign = 'left'; ctx.fillStyle = '#a0aec0'; ctx.font = F.totL;
