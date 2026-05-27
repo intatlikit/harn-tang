@@ -323,18 +323,26 @@
       color: var(--accent);
     }
 
-    .person-toggle-all {
-      border-style: dashed !important;
-      font-weight: 600;
-      color: var(--accent2);
-      border-color: rgba(34, 211, 238, 0.4);
-      background: rgba(34, 211, 238, 0.05);
+    .person-toggle.all-toggle {
+      background: rgba(167, 139, 250, 0.12);
+      border-color: #7c3aed;
+      border-style: dashed;
+      color: #a78bfa;
+      font-weight: 700;
     }
 
-    .person-toggle-all.selected {
-      background: rgba(34, 211, 238, 0.2) !important;
-      border-color: var(--accent2) !important;
-      color: var(--accent2) !important;
+    .person-toggle.all-toggle:hover {
+      background: rgba(167, 139, 250, 0.22);
+      border-color: #a78bfa;
+      box-shadow: 0 0 10px rgba(167, 139, 250, 0.25);
+    }
+
+    .person-toggle.all-toggle.selected {
+      background: rgba(167, 139, 250, 0.25);
+      border-color: #a78bfa;
+      border-style: solid;
+      color: #ddd6fe;
+      box-shadow: 0 0 12px rgba(167, 139, 250, 0.3);
     }
 
     .summary-table {
@@ -607,7 +615,7 @@
   <div class="container">
     <div class="header">
       <span class="header-icon">💸</span>
-      <h1>หารตัง v1</h1>
+      <h1>หารตัง v8</h1>
       <p>แชร์ค่าใช้จ่ายกับเพื่อนๆ ง่ายๆ</p>
     </div>
 
@@ -808,7 +816,7 @@
           </div>
         </div>
         <div class="person-toggles">
-          <button class="person-toggle-all ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? 'selected' : ''}" 
+          <button class="person-toggle all-toggle ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? 'selected' : ''}" 
                   onclick="AppState.selectAllPeople(${item.id})">
             ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? '✓ ' : '+ '}ทุกคน
           </button>
