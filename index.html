@@ -323,6 +323,20 @@
       color: var(--accent);
     }
 
+    .person-toggle-all {
+      border-style: dashed !important;
+      font-weight: 600;
+      color: var(--accent2);
+      border-color: rgba(34, 211, 238, 0.4);
+      background: rgba(34, 211, 238, 0.05);
+    }
+
+    .person-toggle-all.selected {
+      background: rgba(34, 211, 238, 0.2) !important;
+      border-color: var(--accent2) !important;
+      color: var(--accent2) !important;
+    }
+
     .summary-table {
       width: 100%;
       border-collapse: collapse;
@@ -593,7 +607,7 @@
   <div class="container">
     <div class="header">
       <span class="header-icon">💸</span>
-      <h1>หารตัง v6</h1>
+      <h1>หารตัง v1</h1>
       <p>แชร์ค่าใช้จ่ายกับเพื่อนๆ ง่ายๆ</p>
     </div>
 
@@ -794,8 +808,7 @@
           </div>
         </div>
         <div class="person-toggles">
-          <button class="person-toggle ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? 'selected' : ''}" 
-                  style="border-style: dashed; font-weight: bold;"
+          <button class="person-toggle-all ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? 'selected' : ''}" 
                   onclick="AppState.selectAllPeople(${item.id})">
             ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? '✓ ' : '+ '}ทุกคน
           </button>
