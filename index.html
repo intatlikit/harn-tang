@@ -546,6 +546,16 @@
       background: none !important;
     }
 
+    /* Decrease breakdown item font size in image */
+    .capture-mode .breakdown-item {
+      font-size: 0.72rem !important;
+      padding: 3px 0 !important;
+    }
+
+    .capture-mode .breakdown-item-price {
+      font-size: 0.72rem !important;
+    }
+
     @media (max-width: 480px) {
       .container {
         padding: 16px 12px 60px;
@@ -583,7 +593,7 @@
   <div class="container">
     <div class="header">
       <span class="header-icon">💸</span>
-      <h1>หารตัง v5</h1>
+      <h1>หารตัง v6</h1>
       <p>แชร์ค่าใช้จ่ายกับเพื่อนๆ ง่ายๆ</p>
     </div>
 
@@ -733,6 +743,12 @@
         if (item.people.includes(person)) item.people = item.people.filter(p => p !== person);
         else item.people.push(person);
         UI.renderAll();
+      },
+      selectAllPeople(itemId) {
+        const item = this.items.find(i => i.id === itemId); if (!item) return;
+        if (item.people.length === this.friends.length) item.people = [];
+        else item.people = [...this.friends];
+        UI.renderAll();
       }
     };
 
@@ -778,6 +794,11 @@
           </div>
         </div>
         <div class="person-toggles">
+          <button class="person-toggle ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? 'selected' : ''}" 
+                  style="border-style: dashed; font-weight: bold;"
+                  onclick="AppState.selectAllPeople(${item.id})">
+            ${item.people.length === AppState.friends.length && AppState.friends.length > 0 ? '✓ ' : '+ '}ทุกคน
+          </button>
           ${AppState.friends.map(f => `<button class="person-toggle ${item.people.includes(f) ? 'selected' : ''}" onclick="AppState.togglePerson(${item.id}, '${f}')">${item.people.includes(f) ? '✓ ' : ''}${this.escHtml(f)}</button>`).join('')}
         </div>
       </div>
