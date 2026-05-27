@@ -230,18 +230,6 @@
       box-shadow: 0 0 16px rgba(34, 211, 238, 0.3);
     }
 
-    .btn-amber {
-      background: linear-gradient(135deg, var(--accent3), #d97706);
-      color: #1a1000;
-      padding: 13px 22px;
-      font-size: 1rem;
-    }
-
-    .btn-amber:hover {
-      filter: brightness(1.1);
-      box-shadow: 0 0 16px rgba(245, 158, 11, 0.3);
-    }
-
     /* FRIEND TAGS */
     .tags-container {
       display: flex;
@@ -533,44 +521,6 @@
       transform: translateX(-50%) translateY(0);
     }
 
-    /* PREVIEW OVERLAY */
-    .preview-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 2000;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .preview-card {
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: 16px;
-      padding: 20px;
-      max-width: 440px;
-      width: 100%;
-      box-shadow: var(--shadow);
-      text-align: center;
-    }
-
-    .preview-img {
-      width: 100%;
-      max-height: 60vh;
-      object-fit: contain;
-      border-radius: 8px;
-      margin-top: 12px;
-      border: 1px solid var(--border);
-    }
-
-    #slipCanvas {
-      display: none;
-    }
-
     /* ── Responsive ── */
     @media (max-width: 480px) {
       .container {
@@ -589,8 +539,7 @@
         padding: 16px 14px;
       }
 
-      .btn-accent2,
-      .btn-amber {
+      .btn-accent2 {
         padding: 11px 14px;
         font-size: 0.88rem;
       }
@@ -601,10 +550,6 @@
 
       .input-field {
         font-size: 0.9rem;
-      }
-
-      .preview-card {
-        padding: 16px 14px;
       }
     }
 
@@ -622,8 +567,7 @@
         padding: 9px 12px;
       }
 
-      .btn-accent2,
-      .btn-amber {
+      .btn-accent2 {
         font-size: 0.82rem;
         padding: 10px 12px;
       }
@@ -656,7 +600,7 @@
     <!-- HEADER -->
     <div class="header">
       <span class="header-icon">💸</span>
-      <h1>หารตัง v2</h1>
+      <h1>หารตัง v3</h1>
       <p>แชร์ค่าใช้จ่ายกับเพื่อนๆ ง่ายๆ</p>
     </div>
 
@@ -731,7 +675,6 @@
       <div class="divider"></div>
       <div class="action-row">
         <button class="btn btn-accent2" id="shareBtn" onclick="Actions.shareText()">📤 แชร์ข้อความ</button>
-        <button class="btn btn-amber" id="saveBtn" onclick="Actions.saveImage()">🖼 บันทึกสลิป</button>
       </div>
     </div>
 
@@ -752,22 +695,7 @@
     </div>
   </div>
 
-  <!-- IMAGE PREVIEW -->
-  <div class="preview-overlay" id="previewOverlay">
-    <div class="preview-card">
-      <div style="font-size:1.1rem;font-weight:600;color:var(--accent);margin-bottom:6px">✨ สลิปพร้อมแล้ว</div>
-      <p id="previewHint" style="font-size:0.82rem;color:var(--text2);line-height:1.6"></p>
-      <img id="previewImg" class="preview-img">
-      <div style="display:flex;gap:10px;margin-top:14px">
-        <a id="downloadBtn" download="bill.jpg" class="btn btn-amber"
-          style="flex:1;justify-content:center;text-decoration:none">&#11015; ดาวน์โหลด</a>
-        <button class="btn btn-ghost" onclick="UI.closePreview()" style="flex:1;justify-content:center">ปิด</button>
-      </div>
-    </div>
-  </div>
-
   <div class="toast" id="toast"></div>
-  <canvas id="slipCanvas"></canvas>
 
   <script>
     // ─── STATE ───
@@ -840,7 +768,6 @@
     const UI = {
       escHtml: (str) => str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '',
 
-      // ฟังก์ชันจัดรูปแบบเงินที่ใช้ร่วมกันทั้งหมด: "จำนวน บาท"
       formatCurrencyText(num) {
         const formatted = num.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         return `${formatted} บาท`;
@@ -861,19 +788,6 @@
 
       closeDialog: () => document.getElementById('dialogOverlay').style.display = 'none',
       isInAppBrowser: () => /FBAN|FBAV|Line|GSA/i.test(navigator.userAgent || navigator.vendor || window.opera),
-      showPreview(dataUrl) {
-        document.getElementById('previewImg').src = dataUrl;
-        document.getElementById('downloadBtn').href = dataUrl;
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const hint = document.getElementById('previewHint');
-        if (isMobile) {
-          hint.innerHTML = '<strong style="color:var(--accent3)">กดค้างที่รูปภาพ</strong> แล้วเลือก<br><strong style="color:var(--accent2)">"บันทึกรูปภาพ"</strong> หรือกดปุ่ม ดาวน์โหลด';
-        } else {
-          hint.innerHTML = 'กดปุ่ม <strong style="color:var(--accent3)">ดาวน์โหลด</strong> เพื่อบันทึกรูปลงเครื่อง';
-        }
-        document.getElementById('previewOverlay').style.display = 'flex';
-      },
-      closePreview: () => document.getElementById('previewOverlay').style.display = 'none',
 
       onBankTypeChange() {
         const type = document.getElementById('bankType').value;
@@ -966,7 +880,7 @@
           if (!aName) errors.push({ icon: '👤', text: 'กรอกชื่อบัญชี' });
           paymentInfo = { type, label: (type === 'promptpay' ? 'พร้อมเพย์' : bName), number: acctNo, name: aName };
         }
-        return { errors, totals, breakdown, grandTotal, paymentInfo };
+        return { errors, totals, grandTotal, paymentInfo };
       },
 
       shareText() {
@@ -981,130 +895,6 @@
         const text = lines.join('\n');
         if (navigator.share) navigator.share({ text }).catch(() => { });
         else { navigator.clipboard.writeText(text).then(() => UI.showToast('📋 คัดลอกแล้ว')); }
-      },
-
-      async saveImage() {
-        const { errors, totals, breakdown, grandTotal, paymentInfo } = this.getValidationAndPayment();
-        if (errors.length) { UI.showDialog(errors); return; }
-
-        // ── รอ font ให้โหลดเสร็จก่อน (ป้องกัน measureText ผิดบนมือถือ) ──
-        try { await document.fonts.ready; } catch (e) { }
-
-        // ── ค่าคงที่ layout — ปรับตาม screen จริง ──
-        // จำกัด min 340, max 480 และต้องไม่เกิน viewport
-        const W = Math.min(480, Math.max(340, window.innerWidth - 40));
-        const PAD = Math.round(W * 0.08); // ~8% ของความกว้าง
-        const RPAD = W - PAD - 6;          // ขอบขวาสำหรับ right-align (เพิ่ม safety 6px)
-        const CONTENT_W = RPAD - PAD;           // พื้นที่เนื้อหาที่ปลอดภัย
-        const LINE_H = Math.round(40 * W / 420);
-        const BD_LINE = Math.round(22 * W / 420);
-        const HEADER_H = Math.round(118 * W / 420);
-
-        // ── font — scale ตาม W, fallback ถ้า Kanit ไม่โหลด ──
-        const hasKanit = [...document.fonts].some(f => f.family === 'Kanit' && f.status === 'loaded');
-        const FF = hasKanit ? 'Kanit' : 'Arial, sans-serif';
-        // scale font size ตามความกว้าง canvas (base = 420px)
-        const fs = (base) => Math.round(base * W / 420);
-        const F = {
-          title: `bold ${fs(26)}px ${FF}`,
-          sub: `500 ${fs(13)}px ${FF}`,
-          date: `${fs(12)}px ${FF}`,
-          name: `600 ${fs(15)}px ${FF}`,
-          price: `bold ${fs(15)}px ${FF}`,
-          bdHead: `bold ${fs(13)}px ${FF}`,
-          bdItem: `${fs(12)}px ${FF}`,
-          bdPrice: `600 ${fs(12)}px ${FF}`,
-          totL: `bold ${fs(14)}px ${FF}`,
-          totR: `bold ${fs(20)}px ${FF}`,
-          payL: `600 ${fs(14)}px ${FF}`,
-          payS: `${fs(13)}px ${FF}`,
-        };
-
-        // helper: ตัด text ถ้าล้น maxW
-        const fit = (ctx, font, text, maxW) => {
-          ctx.font = font;
-          if (ctx.measureText(text).width <= maxW) return text;
-          let t = text;
-          while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
-          return t + '…';
-        };
-
-        // helper: วาด 2 คอลัมน์ — ชื่อซ้าย, ราคาขวา โดยจำกัด maxWidth ชื่อ
-        const row2col = (ctx, lFont, rFont, lText, rText, y, lColor, rColor) => {
-          ctx.font = rFont;
-          const rW = ctx.measureText(rText).width;
-          // lMax = พื้นที่เนื้อหา ลบความกว้างราคา ลบ gap และ safety margin
-          const lMax = W - (W - RPAD) - PAD - rW - 14;
-          ctx.textAlign = 'left'; ctx.fillStyle = lColor; ctx.font = lFont;
-          ctx.fillText(fit(ctx, lFont, lText, lMax), PAD, y);
-          // วาดราคาที่ RPAD (ขอบขวาจริงที่เผื่อ margin ไว้แล้ว)
-          ctx.textAlign = 'right'; ctx.fillStyle = rColor; ctx.font = rFont;
-          ctx.fillText(rText, RPAD, y);
-        };
-
-        // ── คำนวณความสูง ──
-        const personH = AppState.friends.length * LINE_H;
-        const payH = paymentInfo ? 76 : 0;
-        const totalH = HEADER_H + personH + 10 + 68 + payH + 24;
-
-        // ── สร้าง canvas ──
-        const DPR = 3;
-        const canvas = document.getElementById('slipCanvas');
-        canvas.width = W * DPR;
-        canvas.height = totalH * DPR;
-        const ctx = canvas.getContext('2d');
-        ctx.scale(DPR, DPR);
-
-        // ── พื้นหลัง ──
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, W, totalH);
-
-        // ── Header ──
-        const grad = ctx.createLinearGradient(0, 0, W, 0);
-        grad.addColorStop(0, '#1a2e1c'); grad.addColorStop(1, '#0d1a2a');
-        ctx.fillStyle = grad; ctx.fillRect(0, 0, W, HEADER_H);
-        ctx.fillStyle = '#4ade80'; ctx.fillRect(0, HEADER_H - 2, W, 2);
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#4ade80'; ctx.font = F.title;
-        ctx.fillText('หารตัง', W / 2, 50);
-        ctx.fillStyle = '#22d3ee'; ctx.font = F.sub;
-        ctx.fillText('สรุปยอดค่าใช้จ่าย', W / 2, 74);
-        ctx.fillStyle = '#64748b'; ctx.font = F.date;
-        ctx.fillText(new Date().toLocaleString('th-TH'), W / 2, 96);
-
-        let y = HEADER_H + 30;
-
-        // ── ยอดรายคน ──
-        AppState.friends.forEach((f, i) => {
-          ctx.fillStyle = i % 2 === 0 ? '#161a22' : '#111418';
-          ctx.fillRect(0, y - 26, W, LINE_H);
-          row2col(ctx, F.name, F.price, f, UI.formatCurrencyText(totals[f]), y, '#e8edf5', '#4ade80');
-          y += LINE_H;
-        });
-
-        // ── Grand Total ──
-        y += 10;
-        ctx.fillStyle = '#151e10'; ctx.fillRect(0, y, W, 58);
-        ctx.fillStyle = '#f59e0b'; ctx.fillRect(0, y, W, 2);
-        ctx.textAlign = 'left'; ctx.fillStyle = '#a0aec0'; ctx.font = F.totL;
-        ctx.fillText('ยอดรวมทั้งสิ้น', PAD, y + 36);
-        ctx.textAlign = 'right'; ctx.fillStyle = '#f59e0b'; ctx.font = F.totR;
-        ctx.fillText(UI.formatCurrencyText(grandTotal), RPAD, y + 36);
-        y += 68;
-
-        // ── ข้อมูลโอนเงิน ──
-        if (paymentInfo) {
-          ctx.fillStyle = '#13181f'; ctx.fillRect(0, y - 6, W, 76);
-          ctx.fillStyle = '#2d3548'; ctx.fillRect(PAD, y - 6, CONTENT_W, 1);
-          ctx.textAlign = 'left'; ctx.fillStyle = '#e8edf5'; ctx.font = F.payL;
-          ctx.fillText(fit(ctx, F.payL, `${paymentInfo.label}: ${paymentInfo.number}`, CONTENT_W), PAD, y + 16);
-          ctx.fillStyle = '#a0aec0'; ctx.font = F.payS;
-          ctx.fillText(fit(ctx, F.payS, `ชื่อบัญชี: ${paymentInfo.name}`, CONTENT_W), PAD, y + 40);
-        }
-
-        // ── แสดง preview overlay ทุก browser (กด-ค้างเพื่อบันทึก) ──
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.93);
-        UI.showPreview(dataUrl);
       }
     };
 
